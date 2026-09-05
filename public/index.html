@@ -12,7 +12,7 @@
 .section{background:rgba(17,24,39,.9);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0}.section h2{margin:0 0 12px;font-size:18px}
 .form{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.form label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}input,select,button{width:100%;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#fff;padding:10px}button{cursor:pointer;font-weight:700}.primary{background:#0ea5e9;border-color:#0ea5e9}.secondary{background:#1e293b}.danger{background:#7f1d1d;border-color:#991b1b}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{width:auto}
 .tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}th{color:#cbd5e1;background:#0b1220;position:sticky;top:0}.muted{color:var(--muted)}
-.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{width:auto}.tabactive{background:#0369a1}.summarygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#1e293b;color:#cbd5e1;font-size:12px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{width:auto}.tabactive{background:#0369a1}.summarygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#1e293b;color:#cbd5e1;font-size:12px}.progress{height:10px;background:#0b1220;border:1px solid #334155;border-radius:999px;overflow:hidden;margin-top:8px}.progress>div{height:100%;background:#22c55e;width:0%}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:repeat(2,1fr)}.summarygrid{grid-template-columns:1fr}} @media(max-width:520px){.grid{grid-template-columns:1fr}.form{grid-template-columns:1fr}}
 </style>
 </head>
@@ -20,7 +20,7 @@
 <div class="wrap">
   <div class="top">
     <div class="title"><h1>Amazon Hub Tracker</h1><p>Daily • Weekly • Monthly • Employee Pay</p></div>
-    <div class="pill">Amazon rate: <b>$2.50/package</b> &nbsp; | &nbsp; Mom: <b>$1.10/package</b></div>
+    <div class="pill">Amazon: <b>$2.50/pkg</b> | Mom: <b>$1.10/pkg</b> | Margin: <b>$1.40/pkg</b> | Weekly goal: <b>350 pkgs</b></div>
   </div>
 
   <div class="grid">
@@ -28,6 +28,22 @@
     <div class="card"><small>Today's Revenue</small><div class="big blue" id="todayRev">$0.00</div></div>
     <div class="card"><small>Employee Pay</small><div class="big gold" id="todayPay">$0.00</div></div>
     <div class="card"><small>Net After Labor</small><div class="big green" id="todayNet">$0.00</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Current Totals</h2>
+    <div class="grid">
+      <div class="card"><small>This Week Packages</small><div class="big" id="weekPkgs">0</div><div class="muted" id="weekGoalText">0 / 350</div><div class="progress"><div id="weekProgress"></div></div></div>
+      <div class="card"><small>This Week Revenue</small><div class="big blue" id="weekRev">$0.00</div><div class="muted" id="weekNet">Net $0.00</div></div>
+      <div class="card"><small>This Month Revenue</small><div class="big blue" id="monthRev">$0.00</div><div class="muted" id="monthPkgs">0 packages</div></div>
+      <div class="card"><small>All-Time Net</small><div class="big green" id="allNet">$0.00</div><div class="muted" id="allTotals">0 pkgs • $0.00 revenue</div></div>
+    </div>
+    <div class="grid">
+      <div class="card"><small>All-Time Packages</small><div class="big" id="allPkgs">0</div></div>
+      <div class="card"><small>All-Time Revenue</small><div class="big blue" id="allRev">$0.00</div></div>
+      <div class="card"><small>Mom Payroll Total</small><div class="big gold" id="allPay">$0.00</div></div>
+      <div class="card"><small>Other Expenses Total</small><div class="big" id="allExp">$0.00</div></div>
+    </div>
   </div>
 
   <div class="section">
@@ -62,7 +78,7 @@
   </div>
 </div>
 <script>
-const AMAZON_RATE=2.50, MOM_RATE=1.10;
+const AMAZON_RATE=2.50, MOM_RATE=1.10, WEEKLY_GOAL=350;
 let entries=JSON.parse(localStorage.getItem('amazonHubEntries')||'[]'); let view='daily';
 const $=id=>document.getElementById(id); $('date').value=new Date().toISOString().slice(0,10);
 function money(n){return '$'+Number(n||0).toFixed(2)}
@@ -74,7 +90,14 @@ function clearAll(){if(confirm('Delete all saved route data?')){entries=[];save(
 function startOfWeek(d){const x=new Date(d+'T12:00:00'); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); return x.toISOString().slice(0,10)}
 function monthKey(d){return d.slice(0,7)}
 function groupKey(e){return view==='daily'?e.date:view==='weekly'?startOfWeek(e.date):monthKey(e.date)}
-function render(){const today=new Date().toISOString().slice(0,10), te=entries.filter(e=>e.date===today); let p=0,r=0,pa=0,n=0; te.forEach(e=>{const c=calc(e);p+=e.packages;r+=c.rev;pa+=c.pay;n+=c.net}); $('todayPkgs').textContent=p;$('todayRev').textContent=money(r);$('todayPay').textContent=money(pa);$('todayNet').textContent=money(n);
+function totals(list){return list.reduce((t,e)=>{const c=calc(e);t.pkgs+=e.packages;t.rev+=c.rev;t.pay+=c.pay;t.exp+=e.expense||0;t.net+=c.net;t.hours+=e.hours||0;t.miles+=e.miles||0;return t},{pkgs:0,rev:0,pay:0,exp:0,net:0,hours:0,miles:0})}
+function render(){
+ const today=new Date().toISOString().slice(0,10), week=startOfWeek(today), month=today.slice(0,7);
+ const te=entries.filter(e=>e.date===today), we=entries.filter(e=>startOfWeek(e.date)===week), me=entries.filter(e=>e.date.slice(0,7)===month);
+ const tt=totals(te), wt=totals(we), mt=totals(me), at=totals(entries);
+ $('todayPkgs').textContent=tt.pkgs;$('todayRev').textContent=money(tt.rev);$('todayPay').textContent=money(tt.pay);$('todayNet').textContent=money(tt.net);
+ $('weekPkgs').textContent=wt.pkgs;$('weekGoalText').textContent=`${wt.pkgs} / ${WEEKLY_GOAL} (${Math.min(100,Math.round(wt.pkgs/WEEKLY_GOAL*100))}%)`;$('weekProgress').style.width=Math.min(100,wt.pkgs/WEEKLY_GOAL*100)+'%';$('weekRev').textContent=money(wt.rev);$('weekNet').textContent='Net '+money(wt.net);
+ $('monthRev').textContent=money(mt.rev);$('monthPkgs').textContent=mt.pkgs+' packages';$('allNet').textContent=money(at.net);$('allTotals').textContent=`${at.pkgs} pkgs • ${money(at.rev)} revenue`;$('allPkgs').textContent=at.pkgs;$('allRev').textContent=money(at.rev);$('allPay').textContent=money(at.pay);$('allExp').textContent=money(at.exp);
  $('rows').innerHTML=entries.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(e=>{const c=calc(e);return `<tr><td>${e.date}</td><td>${e.driver}</td><td>${e.packages}</td><td>${money(c.rev)}</td><td>${money(c.pay)}</td><td>${money(e.expense)}</td><td>${money(c.net)}</td><td>${e.hours.toFixed(2)}</td><td>${money(c.rate)}</td><td>${c.pph.toFixed(1)}</td><td>${e.miles.toFixed(1)}</td><td><button onclick="del(${e.id})">Delete</button></td></tr>`}).join('');
  const groups={}; entries.forEach(e=>{const k=groupKey(e);if(!groups[k])groups[k]={pkgs:0,rev:0,pay:0,exp:0,net:0,hours:0,miles:0};const c=calc(e),g=groups[k];g.pkgs+=e.packages;g.rev+=c.rev;g.pay+=c.pay;g.exp+=e.expense;g.net+=c.net;g.hours+=e.hours;g.miles+=e.miles});
  $('summary').innerHTML=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,12).map(([k,g])=>`<div class="card"><small>${view==='weekly'?'Week of ':view==='monthly'?'Month ':'Date '}${k}</small><div class="big">${g.pkgs} pkgs</div><div class="muted">Revenue ${money(g.rev)} • Employee ${money(g.pay)} • Expense ${money(g.exp)}</div><div class="green" style="margin-top:6px;font-weight:800">Net ${money(g.net)}</div><div class="muted">${g.hours.toFixed(1)} hrs • ${g.hours?money(g.net/g.hours):'$0.00'}/hr • ${g.miles.toFixed(1)} mi</div></div>`).join('')||'<div class="muted">No route data yet.</div>';
