@@ -5,7 +5,7 @@ const port=process.env.PORT||3000;
 const publicDir=path.join(__dirname,'public');
 const etaFile='/tmp/amazon-hub-eta.json';
 
-function readEta(){try{return JSON.parse(fs.readFileSync(etaFile,'utf8'))}catch{return {latest:null,history:[]}}}
+function readEta(){try{return JSON.parse(fs.readFileSync(etaFile,'utf8'))}catch{return {latest:null,todayRoute:null,history:[]}}}
 function writeEta(data){try{fs.writeFileSync(etaFile,JSON.stringify(data,null,2))}catch(e){console.error('ETA save error',e.message)}}
 function parseMessage(body=''){
   const pkg=body.match(/(\d+)\s*(?:packages?|pkgs?)/i);
@@ -31,13 +31,25 @@ async function sendSms(to,body){
   if(!r.ok)throw new Error(`Twilio ${r.status}: ${await r.text()}`);
   return r.json();
 }
+function twilioAuth(){const sid=process.env.TWILIO_ACCOUNT_SID,token=process.env.TWILIO_AUTH_TOKEN;return sid&&token?'Basic '+Buffer.from(`${sid}:${token}`).toString('base64'):null}
 function collect(req){return new Promise((resolve,reject)=>{let b='';req.on('data',d=>{b+=d;if(b.length>2e6)req.destroy()});req.on('end',()=>resolve(b));req.on('error',reject)})}
 function json(res,obj,status=200){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(obj))}
+function sameLocalDay(a,b){return a&&b&&String(a).slice(0,10)===String(b).slice(0,10)}
 
 const server=http.createServer(async(req,res)=>{
   const reqPath=req.url.split('?')[0];
   if(reqPath==='/api/eta'&&req.method==='GET')return json(res,readEta());
-  if(reqPath==='/api/today-route'&&req.method==='GET')return json(res,readEta().latest||{});
+  if(reqPath==='/api/today-route'&&req.method==='GET')return json(res,readEta().todayRoute||readEta().latest||{});
+  if(reqPath.startsWith('/api/media/')&&req.method==='GET'){
+    try{
+      const idx=Number(reqPath.split('/').pop()),data=readEta(),route=data.todayRoute||data.latest||{},item=(route.media||[])[idx];
+      if(!item||!item.url){res.writeHead(404);return res.end('Route sheet not found')}
+      const headers={},auth=twilioAuth();if(auth)headers.Authorization=auth;
+      const r=await fetch(item.url,{headers});if(!r.ok){res.writeHead(r.status);return res.end('Unable to load route sheet')}
+      const type=r.headers.get('content-type')||item.type||'application/octet-stream',buf=Buffer.from(await r.arrayBuffer());
+      res.writeHead(200,{'Content-Type':type,'Cache-Control':'private, max-age=60'});return res.end(buf)
+    }catch(e){console.error('Media proxy error',e.message);res.writeHead(500);return res.end('Media error')}
+  }
   if(reqPath==='/sms'&&req.method==='POST'){
     try{
       const raw=await collect(req),form=new URLSearchParams(raw),from=form.get('From')||'',body=form.get('Body')||'',parsed=parseMessage(body),name=driverName(from,parsed.driverFromBody),now=new Date().toISOString(),numMedia=Number(form.get('NumMedia')||0),media=[];
@@ -45,18 +57,30 @@ const server=http.createServer(async(req,res)=>{
         const url=form.get(`MediaUrl${i}`),type=form.get(`MediaContentType${i}`);
         if(url)media.push({url,type:type||''});
       }
+      const data=readEta(),prev=data.todayRoute&&sameLocalDay(data.todayRoute.receivedAt,now)?data.todayRoute:null;
       let status='Message Received';
       if(parsed.done)status='Route Complete';
       else if(media.length&&parsed.eta)status='Hub Sheet + ETA Received';
       else if(media.length)status='Hub Sheet Received';
       else if(parsed.eta)status='ETA Received';
-      const update={id:Date.now(),date:now.slice(0,10),driver:name,from,body,packages:parsed.packages,stops:parsed.stops,eta:parsed.eta,receivedAt:now,status,media,numMedia,source:media.length?'Hub MMS':'Hub SMS'};
-      const data=readEta();data.latest=update;data.todayRoute=update;data.history=[update,...(data.history||[])].slice(0,100);writeEta(data);
+      const update={
+        id:Date.now(),date:now.slice(0,10),driver:name,from,body,
+        packages:parsed.packages!=null?parsed.packages:(prev?.packages??null),
+        stops:parsed.stops!=null?parsed.stops:(prev?.stops??null),
+        eta:parsed.eta||prev?.eta||null,
+        receivedAt:now,status,
+        media:media.length?media:(prev?.media||[]),
+        numMedia:media.length?media.length:(prev?.numMedia||0),
+        source:media.length?'Hub MMS':'Hub SMS',
+        routeSheetReceived:!!(media.length||(prev?.media||[]).length),
+        firstReceivedAt:prev?.firstReceivedAt||prev?.receivedAt||now
+      };
+      data.latest=update;data.todayRoute=update;data.history=[update,...(data.history||[])].slice(0,100);writeEta(data);
       const owner=process.env.OWNER_PHONE_NUMBER;
-      const parts=[`${name}`];if(parsed.stops!=null)parts.push(`${parsed.stops} stops`);if(parsed.packages!=null)parts.push(`${parsed.packages} packages`);if(parsed.eta)parts.push(`ETA ${parsed.eta}`);if(media.length)parts.push('hub sheet received');
+      const parts=[`${name}`];if(update.stops!=null)parts.push(`${update.stops} stops`);if(update.packages!=null)parts.push(`${update.packages} packages`);if(update.eta)parts.push(`ETA ${update.eta}`);if(update.routeSheetReceived)parts.push('hub sheet available');
       try{await sendSms(owner,`Amazon Hub update — ${parts.join(' • ')}`)}catch(e){console.error('Alert SMS failed',e.message)}
       res.writeHead(200,{'Content-Type':'text/xml'});
-      return res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Hub Tracker updated${parsed.eta?`: ETA ${parsed.eta}`:''}${media.length?' with route sheet':''}.</Message></Response>`);
+      return res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Hub Tracker updated${update.eta?`: ETA ${update.eta}`:''}${update.routeSheetReceived?' with route sheet':''}.</Message></Response>`);
     }catch(e){console.error(e);res.writeHead(500,{'Content-Type':'text/plain'});return res.end('Webhook error')}
   }
   let p=reqPath==='/'?'/index.html':reqPath;
@@ -69,7 +93,7 @@ const server=http.createServer(async(req,res)=>{
       const html=data.toString('utf8').replace('</body>','<script src="/hub-sheet.js"></script></body>');
       res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store'});return res.end(html);
     }
-    res.writeHead(200,{'Content-Type':type});res.end(data)
+    res.writeHead(200,{'Content-Type':type,'Cache-Control':ext==='.html'?'no-store':'public, max-age=60'});res.end(data)
   })
 });
 server.listen(port,'0.0.0.0',()=>console.log(`Amazon Hub Tracker running on ${port}`));
