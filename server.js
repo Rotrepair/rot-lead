@@ -33,34 +33,40 @@ async function sendSms(to,body){
   if(!r.ok)throw new Error(`Twilio ${r.status}: ${await r.text()}`);
   return r.json();
 }
-function authHeader(sid){const token=process.env.TWILIO_AUTH_TOKEN;return sid&&token?'Basic '+Buffer.from(`${sid}:${token}`).toString('base64'):null}
+function basic(user,pass){return user&&pass?'Basic '+Buffer.from(`${user}:${pass}`).toString('base64'):null}
+function mediaAuthCandidates(accountSid){
+  const out=[];
+  const keySid=process.env.TWILIO_API_KEY_SID,keySecret=process.env.TWILIO_API_KEY_SECRET;
+  if(keySid&&keySecret)out.push({label:'api-key',header:basic(keySid,keySecret)});
+  const envSid=process.env.TWILIO_ACCOUNT_SID,token=process.env.TWILIO_AUTH_TOKEN;
+  if(accountSid&&token)out.push({label:'webhook-account-token',header:basic(accountSid,token)});
+  if(envSid&&token&&envSid!==accountSid)out.push({label:'env-account-token',header:basic(envSid,token)});
+  return out;
+}
 async function fetchTwilioMedia(url,accountSid){
-  const attempts=[];
-  const envSid=process.env.TWILIO_ACCOUNT_SID;
-  if(accountSid)attempts.push({Authorization:authHeader(accountSid)});
-  if(envSid&&envSid!==accountSid)attempts.push({Authorization:authHeader(envSid)});
-  attempts.push({});
-  let last;
-  for(const headers of attempts){
+  const attempts=mediaAuthCandidates(accountSid);
+  if(!attempts.length){console.error('Media fetch blocked: no Twilio media credentials configured');return {response:null,authMode:'missing'};}
+  let last=null;
+  for(const a of attempts){
     try{
-      const r=await fetch(url,{headers,redirect:'follow'});last=r;
-      if(r.ok)return r;
-      console.error('Media fetch attempt failed',r.status,new URL(url).hostname);
-    }catch(e){console.error('Media fetch error',e.message)}
+      const r=await fetch(url,{headers:{Authorization:a.header},redirect:'follow'});last=r;
+      if(r.ok)return {response:r,authMode:a.label};
+      console.error('Media fetch attempt failed',r.status,a.label,new URL(url).hostname);
+    }catch(e){console.error('Media fetch error',a.label,e.message)}
   }
-  return last;
+  return {response:last,authMode:'failed'};
 }
 async function cacheMedia(item,idx,accountSid){
   if(!item?.url)return item;
   try{
-    const r=await fetchTwilioMedia(item.url,accountSid);
-    if(!r||!r.ok)return item;
+    const {response:r,authMode}=await fetchTwilioMedia(item.url,accountSid);
+    if(!r||!r.ok)return {...item,cacheError:r?`Twilio media returned ${r.status}`:'No media credentials',authMode};
     const buf=Buffer.from(await r.arrayBuffer());
     const type=r.headers.get('content-type')||item.type||'application/octet-stream';
     const ext=type.includes('png')?'.png':type.includes('jpeg')||type.includes('jpg')?'.jpg':type.includes('pdf')?'.pdf':'.bin';
     const file=`route-${Date.now()}-${idx}${ext}`,full=path.join(mediaDir,file);fs.writeFileSync(full,buf);
-    return {...item,cachedFile:file,type};
-  }catch(e){console.error('Media cache error',e.message);return item}
+    return {...item,cachedFile:file,type,authMode,cacheError:null};
+  }catch(e){console.error('Media cache error',e.message);return {...item,cacheError:e.message}}
 }
 function collect(req){return new Promise((resolve,reject)=>{let b='';req.on('data',d=>{b+=d;if(b.length>2e6)req.destroy()});req.on('end',()=>resolve(b));req.on('error',reject)})}
 function json(res,obj,status=200){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(obj))}
@@ -70,6 +76,10 @@ const server=http.createServer(async(req,res)=>{
   const reqPath=req.url.split('?')[0];
   if(reqPath==='/api/eta'&&req.method==='GET')return json(res,readEta());
   if(reqPath==='/api/today-route'&&req.method==='GET')return json(res,readEta().todayRoute||readEta().latest||{});
+  if(reqPath==='/api/media-status'&&req.method==='GET'){
+    const data=readEta(),route=data.todayRoute||data.latest||{},items=route.media||[];
+    return json(res,{hasMedia:items.length>0,cached:items.some(x=>x.cachedFile),needsApiKey:items.some(x=>x.cacheError)&&!(process.env.TWILIO_API_KEY_SID&&process.env.TWILIO_API_KEY_SECRET),items:items.map(x=>({type:x.type||'',cached:!!x.cachedFile,error:x.cacheError||null,authMode:x.authMode||null}))});
+  }
   if(reqPath.startsWith('/api/media/')&&req.method==='GET'){
     try{
       const idx=Number(reqPath.split('/').pop()),data=readEta(),route=data.todayRoute||data.latest||{},item=(route.media||[])[idx];
@@ -79,8 +89,8 @@ const server=http.createServer(async(req,res)=>{
         if(fs.existsSync(full)){const buf=fs.readFileSync(full);res.writeHead(200,{'Content-Type':item.type||'application/octet-stream','Cache-Control':'private, max-age=300'});return res.end(buf)}
       }
       if(!item.url){res.writeHead(404);return res.end('Route sheet not found')}
-      const r=await fetchTwilioMedia(item.url,route.accountSid||process.env.TWILIO_ACCOUNT_SID);
-      if(!r||!r.ok){res.writeHead(r?.status||502);return res.end('Unable to load route sheet')}
+      const {response:r}=await fetchTwilioMedia(item.url,route.accountSid||process.env.TWILIO_ACCOUNT_SID);
+      if(!r||!r.ok){res.writeHead(r?.status||502,{'Content-Type':'text/plain'});return res.end('Route sheet authentication failed. Configure TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET.')}
       const type=r.headers.get('content-type')||item.type||'application/octet-stream',buf=Buffer.from(await r.arrayBuffer());
       res.writeHead(200,{'Content-Type':type,'Cache-Control':'private, max-age=60'});return res.end(buf)
     }catch(e){console.error('Media proxy error',e.message);res.writeHead(500);return res.end('Media error')}
@@ -110,14 +120,16 @@ const server=http.createServer(async(req,res)=>{
         numMedia:finalMedia.length?finalMedia.length:(prev?.numMedia||0),
         source:finalMedia.length?'Hub MMS':'Hub SMS',
         routeSheetReceived:!!(finalMedia.length||(prev?.media||[]).length),
+        routeSheetCached:finalMedia.some(x=>x.cachedFile)||(prev?.routeSheetCached||false),
+        routeSheetAuthError:finalMedia.some(x=>x.cacheError)||(prev?.routeSheetAuthError||false),
         firstReceivedAt:prev?.firstReceivedAt||prev?.receivedAt||now
       };
       data.latest=update;data.todayRoute=update;data.history=[update,...(data.history||[])].slice(0,100);writeEta(data);
       const owner=process.env.OWNER_PHONE_NUMBER;
-      const parts=[`${name}`];if(update.stops!=null)parts.push(`${update.stops} stops`);if(update.packages!=null)parts.push(`${update.packages} packages`);if(update.eta)parts.push(`ETA ${update.eta}`);if(update.routeSheetReceived)parts.push('hub sheet available');
+      const parts=[`${name}`];if(update.stops!=null)parts.push(`${update.stops} stops`);if(update.packages!=null)parts.push(`${update.packages} packages`);if(update.eta)parts.push(`ETA ${update.eta}`);if(update.routeSheetCached)parts.push('hub sheet ready');else if(update.routeSheetReceived)parts.push('hub sheet received');
       try{await sendSms(owner,`Amazon Hub update — ${parts.join(' • ')}`)}catch(e){console.error('Alert SMS failed',e.message)}
       res.writeHead(200,{'Content-Type':'text/xml'});
-      return res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Hub Tracker updated${update.eta?`: ETA ${update.eta}`:''}${update.routeSheetReceived?' with route sheet':''}.</Message></Response>`);
+      return res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Hub Tracker updated${update.eta?`: ETA ${update.eta}`:''}${update.routeSheetCached?' with route sheet ready':update.routeSheetReceived?' with route sheet received':''}.</Message></Response>`);
     }catch(e){console.error(e);res.writeHead(500,{'Content-Type':'text/plain'});return res.end('Webhook error')}
   }
   let p=reqPath==='/'?'/index.html':reqPath;
