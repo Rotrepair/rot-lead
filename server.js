@@ -7,10 +7,13 @@ const etaFile='/tmp/amazon-hub-eta.json';
 
 function readEta(){try{return JSON.parse(fs.readFileSync(etaFile,'utf8'))}catch{return {latest:null,history:[]}}}
 function writeEta(data){try{fs.writeFileSync(etaFile,JSON.stringify(data,null,2))}catch(e){console.error('ETA save error',e.message)}}
-function parseEtaMessage(body=''){
+function parseMessage(body=''){
   const pkg=body.match(/(\d+)\s*(?:packages?|pkgs?)/i);
+  const stops=body.match(/(\d+)\s*(?:stops?|drops?)/i);
   const eta=body.match(/\beta\s*[:\-]?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:am|pm)?|\d+\s*(?:mins?|minutes?|hrs?|hours?))/i);
-  return {packages:pkg?Number(pkg[1]):null,eta:eta?eta[1].trim():null};
+  const arrival=body.match(/(?:arrival|arrive|drop(?:\s*time)?)\s*(?:eta)?\s*[:\-]?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:am|pm)?)/i);
+  const done=/\b(done|complete|completed|finished)\b/i.test(body);
+  return {packages:pkg?Number(pkg[1]):null,stops:stops?Number(stops[1]):null,eta:(eta?eta[1]:arrival?arrival[1]:null)?.trim()||null,done};
 }
 function driverName(from){
   const map={};
@@ -26,7 +29,7 @@ async function sendSms(to,body){
   if(!r.ok)throw new Error(`Twilio ${r.status}: ${await r.text()}`);
   return r.json();
 }
-function collect(req){return new Promise((resolve,reject)=>{let b='';req.on('data',d=>{b+=d;if(b.length>1e6)req.destroy()});req.on('end',()=>resolve(b));req.on('error',reject)})}
+function collect(req){return new Promise((resolve,reject)=>{let b='';req.on('data',d=>{b+=d;if(b.length>2e6)req.destroy()});req.on('end',()=>resolve(b));req.on('error',reject)})}
 function json(res,obj,status=200){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(obj))}
 
 const server=http.createServer(async(req,res)=>{
@@ -34,14 +37,23 @@ const server=http.createServer(async(req,res)=>{
   if(reqPath==='/api/eta'&&req.method==='GET')return json(res,readEta());
   if(reqPath==='/sms'&&req.method==='POST'){
     try{
-      const raw=await collect(req),form=new URLSearchParams(raw),from=form.get('From')||'',body=form.get('Body')||'',parsed=parseEtaMessage(body),name=driverName(from),now=new Date().toISOString();
-      const update={id:Date.now(),driver:name,from,body,packages:parsed.packages,eta:parsed.eta,receivedAt:now,status:parsed.eta?'ETA Received':'Message Received'};
+      const raw=await collect(req),form=new URLSearchParams(raw),from=form.get('From')||'',body=form.get('Body')||'',parsed=parseMessage(body),name=driverName(from),now=new Date().toISOString(),numMedia=Number(form.get('NumMedia')||0),media=[];
+      for(let i=0;i<numMedia;i++){
+        const url=form.get(`MediaUrl${i}`),type=form.get(`MediaContentType${i}`);
+        if(url)media.push({url,type:type||''});
+      }
+      let status='Message Received';
+      if(parsed.done)status='Route Complete';
+      else if(media.length&&parsed.eta)status='Route Sheet + ETA Received';
+      else if(media.length)status='Route Sheet Received';
+      else if(parsed.eta)status='ETA Received';
+      const update={id:Date.now(),driver:name,from,body,packages:parsed.packages,stops:parsed.stops,eta:parsed.eta,receivedAt:now,status,media,numMedia};
       const data=readEta();data.latest=update;data.history=[update,...(data.history||[])].slice(0,100);writeEta(data);
       const owner=process.env.OWNER_PHONE_NUMBER;
-      const alert=`Amazon Hub update — ${name}: ${parsed.packages!=null?parsed.packages+' packages, ':''}${parsed.eta?'ETA '+parsed.eta:body}`;
-      try{await sendSms(owner,alert)}catch(e){console.error('Alert SMS failed',e.message)}
+      const parts=[`${name}`];if(parsed.stops!=null)parts.push(`${parsed.stops} stops`);if(parsed.packages!=null)parts.push(`${parsed.packages} packages`);if(parsed.eta)parts.push(`ETA ${parsed.eta}`);if(media.length)parts.push('route sheet received');if(!parts.length&&body)parts.push(body);
+      try{await sendSms(owner,`Amazon Hub update — ${parts.join(' • ')}`)}catch(e){console.error('Alert SMS failed',e.message)}
       res.writeHead(200,{'Content-Type':'text/xml'});
-      return res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Update received${parsed.eta?`: ETA ${parsed.eta}`:''}. Thank you.</Message></Response>`);
+      return res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Route update received${parsed.eta?`: ETA ${parsed.eta}`:''}${media.length?' with route sheet':''}.</Message></Response>`);
     }catch(e){console.error(e);res.writeHead(500,{'Content-Type':'text/plain'});return res.end('Webhook error')}
   }
   let p=reqPath==='/'?'/index.html':reqPath;
