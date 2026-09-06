@@ -1,0 +1,3 @@
+const fs=require('fs');
+const path=require('path');
+const icon='iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAAA9zQYyAAAAn0lEQVR42u2dB5xVxfnH/3Pn3Hv3tgV2...
