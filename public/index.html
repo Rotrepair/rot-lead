@@ -34,7 +34,28 @@ const ENTRY_KEY='amazonHubEntries',DRAFT_KEY='amazonHubDraft';
 let entries=[],view='daily';
 function localDate(){const d=new Date(),off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10)}
 function safeParse(v,fallback){try{const x=JSON.parse(v);return x??fallback}catch{return fallback}}
-const saved=safeParse(localStorage.getItem(ENTRY_KEY),null);entries=Array.isArray(saved)?saved:imported.map(e=>({...e}));if(!Array.isArray(saved))localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));
+const saved=safeParse(localStorage.getItem(ENTRY_KEY),null);entries=Array.isArray(saved)?saved:imported.map(e=>({...e}));
+if(!Array.isArray(saved))localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));
+// Authoritative correction: 9/19/2026 = 44 total packages. Collapse duplicate "Me" rows while preserving route details.
+(function applyAuthoritativeCorrections(){
+  const date='2026-09-19',driver='Me',correctPackages=44;
+  const idx=[];entries.forEach((e,i)=>{if(e.date===date&&e.driver===driver)idx.push(i)});
+  if(idx.length){
+    const rows=idx.map(i=>entries[i]);
+    const keep={...rows[0],packages:correctPackages,source:'Corrected performance history'};
+    for(const e of rows){
+      if((keep.hours==null||Number(keep.hours)===0)&&Number(e.hours)>0)keep.hours=Number(e.hours);
+      if(keep.startMiles==null&&e.startMiles!=null)keep.startMiles=e.startMiles;
+      if(keep.endMiles==null&&e.endMiles!=null)keep.endMiles=e.endMiles;
+      if((keep.expense==null||Number(keep.expense)===0)&&Number(e.expense)>0)keep.expense=Number(e.expense);
+    }
+    if(keep.startMiles!=null&&keep.endMiles!=null&&Number(keep.endMiles)>=Number(keep.startMiles))keep.miles=Number(keep.endMiles)-Number(keep.startMiles);
+    entries=entries.filter((e,i)=>!idx.includes(i));entries.push(keep);
+  }else{
+    entries.push({id:100126,date,driver,packages:correctPackages,hours:0,miles:0,expense:0,source:'Corrected performance history'});
+  }
+  try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries))}catch{}
+})();
 function money(n){return '$'+Number(n||0).toFixed(2)}
 function routeMiles(e){const s=Number(e.startMiles),x=Number(e.endMiles);return Number.isFinite(s)&&Number.isFinite(x)&&s>0&&x>=s?x-s:Number(e.miles||0)}
 function calc(e){const rev=Number(e.packages||0)*AMAZON_RATE,pay=e.driver==='Mom'?Number(e.packages||0)*MOM_RATE:0,net=rev-pay-Number(e.expense||0);return{rev,pay,net,pph:Number(e.hours||0)>0?Number(e.packages||0)/Number(e.hours):0}}
@@ -57,9 +78,14 @@ function addEntry(){
   if(hasStart&&hasEnd&&end<start)return alert('Ending odometer must be greater than or equal to starting odometer.');
 
   let matchIndex=-1;
-  if(hasEnd&&!hasStart){
+  // Use one route record per date + driver so package totals cannot be double-counted by repeated saves.
+  for(let i=entries.length-1;i>=0;i--){
+    const e=entries[i];
+    if(e.date===date&&e.driver===driver){matchIndex=i;break}
+  }
+  if(matchIndex<0&&hasEnd&&!hasStart){
     for(let i=entries.length-1;i>=0;i--){const e=entries[i];if(e.date===date&&e.driver===driver&&e.source==='Manual'&&e.startMiles!=null&&e.endMiles==null){matchIndex=i;break}}
-  }else if(hasStart&&!hasEnd){
+  }else if(matchIndex<0&&hasStart&&!hasEnd){
     for(let i=entries.length-1;i>=0;i--){const e=entries[i];if(e.date===date&&e.driver===driver&&e.source==='Manual'&&e.startMiles==null&&e.endMiles!=null){matchIndex=i;break}}
   }
 
