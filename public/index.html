@@ -66,6 +66,19 @@ function draftObj(){return{date:$('date').value,driver:$('driver').value,package
 function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify(draftObj()))}catch{}preview()}
 function loadDraft(){const d=safeParse(localStorage.getItem(DRAFT_KEY),{});$('date').value=d.date||localDate();$('driver').value=d.driver||'Me';['packages','hours','startMiles','endMiles','expense'].forEach(k=>$(k).value=d[k]??'');const stops=document.getElementById('stops');if(stops&&d.stops!=null)stops.value=d.stops;preview()}
 function preview(){const sr=$('startMiles').value,er=$('endMiles').value,s=Number(sr),e=Number(er),m=sr!==''&&er!==''&&Number.isFinite(s)&&Number.isFinite(e)&&s>0&&e>=s?e-s:0;$('miles').value=m?m.toFixed(1):'';$('mileagePreview').textContent=m.toFixed(1)+' mi'}
+function loadSavedRoute(date,driver){
+  const matches=entries.filter(e=>e.date===date&&e.driver===driver);
+  if(!matches.length)return false;
+  const e=matches[matches.length-1];
+  $('packages').value=e.packages??'';
+  $('hours').value=e.hours??'';
+  $('startMiles').value=e.startMiles??'';
+  $('endMiles').value=e.endMiles??'';
+  $('expense').value=e.expense??'';
+  preview();
+  try{localStorage.setItem(DRAFT_KEY,JSON.stringify(draftObj()))}catch{}
+  return true;
+}
 function addEntry(){
   const date=$('date').value,driver=$('driver').value;
   const pr=$('packages').value.trim(),hr=$('hours').value.trim(),sr=$('startMiles').value.trim(),er=$('endMiles').value.trim(),xr=$('expense').value.trim();
@@ -123,6 +136,8 @@ async function refreshEta(){try{const r=await fetch('/api/eta',{cache:'no-store'
 function exportCSV(){const head=['Date','Driver','Packages','Revenue','Start Odometer','End Odometer','Daily Miles','Hours','Packages per Hour','Employee Pay','Other Expense','Net','Source'],lines=[head.join(',')];entries.forEach(e=>{const c=calc(e);lines.push([e.date,e.driver,e.packages||0,c.rev.toFixed(2),e.startMiles??'',e.endMiles??'',routeMiles(e).toFixed(1),Number(e.hours||0).toFixed(2),c.pph.toFixed(2),c.pay.toFixed(2),Number(e.expense||0).toFixed(2),c.net.toFixed(2),e.source||''].join(','))});download('amazon-hub-routes.csv',lines.join('\n'),'text/csv')}
 function downloadBackup(){download('amazon-hub-backup.json',JSON.stringify(entries,null,2),'application/json')}
 function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-['date','driver','packages','hours','startMiles','endMiles','expense'].forEach(id=>$(id).addEventListener('input',saveDraft));$('saveBtn').addEventListener('click',addEntry);$('csvBtn').addEventListener('click',exportCSV);$('backupBtn').addEventListener('click',downloadBackup);$('restoreBtn').addEventListener('click',restoreHistory);$('clearBtn').addEventListener('click',clearAll);$('dailyBtn').addEventListener('click',()=>setView('daily'));$('weeklyBtn').addEventListener('click',()=>setView('weekly'));$('monthlyBtn').addEventListener('click',()=>setView('monthly'));
-loadDraft();render();refreshEta();setInterval(refreshEta,15000);
+['packages','hours','startMiles','endMiles','expense'].forEach(id=>$(id).addEventListener('input',saveDraft));
+$('date').addEventListener('change',()=>{if(!loadSavedRoute($('date').value,$('driver').value))saveDraft()});
+$('driver').addEventListener('change',()=>{if(!loadSavedRoute($('date').value,$('driver').value))saveDraft()});$('saveBtn').addEventListener('click',addEntry);$('csvBtn').addEventListener('click',exportCSV);$('backupBtn').addEventListener('click',downloadBackup);$('restoreBtn').addEventListener('click',restoreHistory);$('clearBtn').addEventListener('click',clearAll);$('dailyBtn').addEventListener('click',()=>setView('daily'));$('weeklyBtn').addEventListener('click',()=>setView('weekly'));$('monthlyBtn').addEventListener('click',()=>setView('monthly'));
+loadDraft();loadSavedRoute($('date').value,$('driver').value);render();refreshEta();setInterval(refreshEta,15000);
 </script></body></html>
