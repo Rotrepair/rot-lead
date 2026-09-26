@@ -62,9 +62,9 @@ function calc(e){const rev=Number(e.packages||0)*AMAZON_RATE,pay=e.driver==='Mom
 function startOfWeek(d){const x=new Date(d+'T12:00:00'),day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x.toISOString().slice(0,10)}
 function totals(list){return list.reduce((t,e)=>{const c=calc(e);t.pkgs+=Number(e.packages||0);t.rev+=c.rev;t.pay+=c.pay;t.exp+=Number(e.expense||0);t.net+=c.net;t.hours+=Number(e.hours||0);t.miles+=routeMiles(e);return t},{pkgs:0,rev:0,pay:0,exp:0,net:0,hours:0,miles:0})}
 function persist(){try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));$('saveState').textContent='Saved ✓';setTimeout(()=>{$('saveState').textContent=''},1800);return true}catch(e){alert('Could not save route data on this device: '+e.message);return false}}
-function draftObj(){return{date:$('date').value,driver:$('driver').value,packages:$('packages').value,hours:$('hours').value,startMiles:$('startMiles').value,endMiles:$('endMiles').value,expense:$('expense').value}}
+function draftObj(){return{date:$('date').value,driver:$('driver').value,packages:$('packages').value,stops:document.getElementById('stops')?.value??'',hours:$('hours').value,startMiles:$('startMiles').value,endMiles:$('endMiles').value,expense:$('expense').value}}
 function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify(draftObj()))}catch{}preview()}
-function loadDraft(){const d=safeParse(localStorage.getItem(DRAFT_KEY),{});$('date').value=d.date||localDate();$('driver').value=d.driver||'Me';['packages','hours','startMiles','endMiles','expense'].forEach(k=>$(k).value=d[k]??'');preview()}
+function loadDraft(){const d=safeParse(localStorage.getItem(DRAFT_KEY),{});$('date').value=d.date||localDate();$('driver').value=d.driver||'Me';['packages','hours','startMiles','endMiles','expense'].forEach(k=>$(k).value=d[k]??'');const stops=document.getElementById('stops');if(stops&&d.stops!=null)stops.value=d.stops;preview()}
 function preview(){const sr=$('startMiles').value,er=$('endMiles').value,s=Number(sr),e=Number(er),m=sr!==''&&er!==''&&Number.isFinite(s)&&Number.isFinite(e)&&s>0&&e>=s?e-s:0;$('miles').value=m?m.toFixed(1):'';$('mileagePreview').textContent=m.toFixed(1)+' mi'}
 function addEntry(){
   const date=$('date').value,driver=$('driver').value;
@@ -104,7 +104,14 @@ function addEntry(){
     const e={id:Date.now(),date,driver,packages:hasPackages?packages:0,hours:hasHours?hours:0,startMiles:hasStart?start:null,endMiles:hasEnd?end:null,miles,expense:hasExpense?expense:0,source:'Manual'};
     entries.push(e);if(!persist()){entries.pop();return}
   }
-  localStorage.removeItem(DRAFT_KEY);['packages','hours','startMiles','endMiles','miles','expense'].forEach(id=>$(id).value='');$('mileagePreview').textContent='0.0 mi';$('date').value=date;render()
+  // Keep the saved values visible after Save Route so the full daily route can be reviewed and edited.
+  localStorage.removeItem(DRAFT_KEY);$('date').value=date;$('driver').value=driver;
+  $('packages').value=hasPackages?packages:(entries[matchIndex>=0?matchIndex:entries.length-1]?.packages??'');
+  $('hours').value=hasHours?hours:(entries[matchIndex>=0?matchIndex:entries.length-1]?.hours??'');
+  $('startMiles').value=hasStart?start:(entries[matchIndex>=0?matchIndex:entries.length-1]?.startMiles??'');
+  $('endMiles').value=hasEnd?end:(entries[matchIndex>=0?matchIndex:entries.length-1]?.endMiles??'');
+  $('expense').value=hasExpense?expense:(entries[matchIndex>=0?matchIndex:entries.length-1]?.expense??'');
+  preview();render()
 }
 function del(id){entries=entries.filter(e=>String(e.id)!==String(id));persist();render()}
 function restoreHistory(){const manual=entries.filter(e=>!String(e.source||'').startsWith('Imported'));entries=[...imported.map(e=>({...e})),...manual];persist();render()}
