@@ -47,7 +47,9 @@
     const existing=readStops().find(r=>r.date===(dateInput?.value||localDate()));if(existing)stopsInput.value=existing.stops;
     const draft=(()=>{try{return JSON.parse(localStorage.getItem('amazonHubDraft')||'{}')}catch{return {}}})();if(stopsInput&&draft.stops!=null&&draft.stops!=='')stopsInput.value=draft.stops;
     stopsInput?.addEventListener('input',()=>{try{const d=JSON.parse(localStorage.getItem('amazonHubDraft')||'{}');d.stops=stopsInput.value;localStorage.setItem('amazonHubDraft',JSON.stringify(d))}catch{}});
-    dateInput?.addEventListener('change',()=>{const r=readStops().find(x=>x.date===dateInput.value);stopsInput.value=r?.stops??''});
+    const loadSavedStops=()=>{const r=readStops().find(x=>x.date===dateInput.value);stopsInput.value=r?.stops??''};
+    dateInput?.addEventListener('change',loadSavedStops);
+    document.getElementById('driver')?.addEventListener('change',loadSavedStops);
     document.getElementById('saveBtn')?.addEventListener('click',()=>{
       const date=dateInput?.value||localDate(),v=stopsInput?.value;
       if(v!==''&&Number(v)>=0){upsertStop(date,Number(v),'Manual');const s=document.getElementById('stopSaveState');if(s){s.textContent='Stops saved ✓';setTimeout(()=>s.textContent='Stops tracked separately from packages',1800)}}
