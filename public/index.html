@@ -36,23 +36,28 @@ function localDate(){const d=new Date(),off=d.getTimezoneOffset()*60000;return n
 function safeParse(v,fallback){try{const x=JSON.parse(v);return x??fallback}catch{return fallback}}
 const saved=safeParse(localStorage.getItem(ENTRY_KEY),null);entries=Array.isArray(saved)?saved:imported.map(e=>({...e}));
 if(!Array.isArray(saved))localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));
-// Authoritative correction: 9/19/2026 = 44 total packages. Collapse duplicate "Me" rows while preserving route details.
+// Authoritative package corrections. Collapse duplicate same-day "Me" rows while preserving hours/odometer/expense.
 (function applyAuthoritativeCorrections(){
-  const date='2026-09-19',driver='Me',correctPackages=44;
-  const idx=[];entries.forEach((e,i)=>{if(e.date===date&&e.driver===driver)idx.push(i)});
-  if(idx.length){
-    const rows=idx.map(i=>entries[i]);
-    const keep={...rows[0],packages:correctPackages,source:'Corrected performance history'};
-    for(const e of rows){
-      if((keep.hours==null||Number(keep.hours)===0)&&Number(e.hours)>0)keep.hours=Number(e.hours);
-      if(keep.startMiles==null&&e.startMiles!=null)keep.startMiles=e.startMiles;
-      if(keep.endMiles==null&&e.endMiles!=null)keep.endMiles=e.endMiles;
-      if((keep.expense==null||Number(keep.expense)===0)&&Number(e.expense)>0)keep.expense=Number(e.expense);
+  const corrections=[
+    {date:'2026-09-19',driver:'Me',packages:44,id:100126},
+    {date:'2026-09-29',driver:'Me',packages:40,id:100127}
+  ];
+  for(const correction of corrections){
+    const idx=[];entries.forEach((e,i)=>{if(e.date===correction.date&&e.driver===correction.driver)idx.push(i)});
+    if(idx.length){
+      const rows=idx.map(i=>entries[i]);
+      const keep={...rows[0],packages:correction.packages,source:'Corrected performance history'};
+      for(const e of rows){
+        if((keep.hours==null||Number(keep.hours)===0)&&Number(e.hours)>0)keep.hours=Number(e.hours);
+        if(keep.startMiles==null&&e.startMiles!=null)keep.startMiles=e.startMiles;
+        if(keep.endMiles==null&&e.endMiles!=null)keep.endMiles=e.endMiles;
+        if((keep.expense==null||Number(keep.expense)===0)&&Number(e.expense)>0)keep.expense=Number(e.expense);
+      }
+      if(keep.startMiles!=null&&keep.endMiles!=null&&Number(keep.endMiles)>=Number(keep.startMiles))keep.miles=Number(keep.endMiles)-Number(keep.startMiles);
+      entries=entries.filter((e,i)=>!idx.includes(i));entries.push(keep);
+    }else{
+      entries.push({id:correction.id,date:correction.date,driver:correction.driver,packages:correction.packages,hours:0,miles:0,expense:0,source:'Corrected performance history'});
     }
-    if(keep.startMiles!=null&&keep.endMiles!=null&&Number(keep.endMiles)>=Number(keep.startMiles))keep.miles=Number(keep.endMiles)-Number(keep.startMiles);
-    entries=entries.filter((e,i)=>!idx.includes(i));entries.push(keep);
-  }else{
-    entries.push({id:100126,date,driver,packages:correctPackages,hours:0,miles:0,expense:0,source:'Corrected performance history'});
   }
   try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries))}catch{}
 })();
