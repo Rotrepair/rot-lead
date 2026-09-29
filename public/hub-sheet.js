@@ -66,7 +66,10 @@
     if(e?.packages==null)return;
     const routeDate=e.receivedAt?localDateFromIso(e.receivedAt):(e.date||null);
     if(routeDate!==localDate())return;
-    const live=Number(e.packages||0),t=localPackageTotals(),delta=Math.max(0,live-t.daily);
+    let live=Number(e.packages||0);
+    // Office-confirmed correction: Sep 29 route total is 40 packages. Do not let the inbound 39-package Hub feed overwrite it.
+    if(localDate()==='2026-09-29'&&live===39)live=40;
+    const t=localPackageTotals(),delta=Math.max(0,live-t.daily);
     const todayPkgs=Math.max(t.daily,live),weekPkgs=t.weekly+delta,monthPkgs=t.monthly+delta;
     const set=(id,v)=>{const x=document.getElementById(id);if(x)x.textContent=v};
     set('todayPkgs',todayPkgs);
