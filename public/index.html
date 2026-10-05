@@ -66,7 +66,27 @@ function routeMiles(e){const s=Number(e.startMiles),x=Number(e.endMiles);return 
 function calc(e){const rev=Number(e.packages||0)*AMAZON_RATE,pay=e.driver==='Mom'?Number(e.packages||0)*MOM_RATE:0,net=rev-pay-Number(e.expense||0);return{rev,pay,net,pph:Number(e.hours||0)>0?Number(e.packages||0)/Number(e.hours):0}}
 function startOfWeek(d){const x=new Date(d+'T12:00:00'),day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x.toISOString().slice(0,10)}
 function totals(list){return list.reduce((t,e)=>{const c=calc(e);t.pkgs+=Number(e.packages||0);t.rev+=c.rev;t.pay+=c.pay;t.exp+=Number(e.expense||0);t.net+=c.net;t.hours+=Number(e.hours||0);t.miles+=routeMiles(e);return t},{pkgs:0,rev:0,pay:0,exp:0,net:0,hours:0,miles:0})}
-function persist(){try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));$('saveState').textContent='Saved ✓';setTimeout(()=>{$('saveState').textContent=''},1800);return true}catch(e){alert('Could not save route data on this device: '+e.message);return false}}
+function persist(){try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));$('saveState').textContent='Saved ✓';setTimeout(()=>{$('saveState').textContent=''},1800);window.syncHubState?.();return true}catch(e){alert('Could not save route data on this device: '+e.message);return false}}
+let hubSyncBusy=false;
+async function syncHubState(){
+  if(hubSyncBusy)return;hubSyncBusy=true;
+  try{
+    const stops=safeParse(localStorage.getItem('amazonHubStops'),[]);
+    const r=await fetch('/api/hub-state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries,stops})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    if(Array.isArray(data.entries)){
+      entries=data.entries.map(e=>({...e}));
+      localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));
+    }
+    if(Array.isArray(data.stops))localStorage.setItem('amazonHubStops',JSON.stringify(data.stops));
+    render();
+    loadSavedRoute($('date').value,$('driver').value);
+    const s=$('saveState');if(s){s.textContent='Synced ✓';setTimeout(()=>{if(s.textContent==='Synced ✓')s.textContent=''},1800)}
+  }catch(e){console.warn('Hub sync failed',e.message)}
+  finally{hubSyncBusy=false}
+}
+window.syncHubState=syncHubState;
 function draftObj(){return{date:$('date').value,driver:$('driver').value,packages:$('packages').value,stops:document.getElementById('stops')?.value??'',hours:$('hours').value,startMiles:$('startMiles').value,endMiles:$('endMiles').value,expense:$('expense').value}}
 function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify(draftObj()))}catch{}preview()}
 function loadDraft(){const d=safeParse(localStorage.getItem(DRAFT_KEY),{});$('date').value=d.date||localDate();$('driver').value=d.driver||'Me';['packages','hours','startMiles','endMiles','expense'].forEach(k=>$(k).value=d[k]??'');const stops=document.getElementById('stops');if(stops&&d.stops!=null)stops.value=d.stops;preview()}
@@ -144,5 +164,5 @@ function download(name,text,type){const a=document.createElement('a');a.href=URL
 ['packages','hours','startMiles','endMiles','expense'].forEach(id=>$(id).addEventListener('input',saveDraft));
 $('date').addEventListener('change',()=>{if(!loadSavedRoute($('date').value,$('driver').value))saveDraft()});
 $('driver').addEventListener('change',()=>{if(!loadSavedRoute($('date').value,$('driver').value))saveDraft()});$('saveBtn').addEventListener('click',addEntry);$('csvBtn').addEventListener('click',exportCSV);$('backupBtn').addEventListener('click',downloadBackup);$('restoreBtn').addEventListener('click',restoreHistory);$('clearBtn').addEventListener('click',clearAll);$('dailyBtn').addEventListener('click',()=>setView('daily'));$('weeklyBtn').addEventListener('click',()=>setView('weekly'));$('monthlyBtn').addEventListener('click',()=>setView('monthly'));
-loadDraft();loadSavedRoute($('date').value,$('driver').value);render();refreshEta();setInterval(refreshEta,15000);
+loadDraft();loadSavedRoute($('date').value,$('driver').value);render();syncHubState();refreshEta();setInterval(refreshEta,15000);setInterval(syncHubState,20000);
 </script></body></html>
