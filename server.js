@@ -12,7 +12,28 @@ try{fs.mkdirSync(mediaDir,{recursive:true})}catch{}
 
 function readEta(){try{return JSON.parse(fs.readFileSync(etaFile,'utf8'))}catch{return {latest:null,todayRoute:null,history:[]}}}
 function writeEta(data){try{fs.writeFileSync(etaFile,JSON.stringify(data,null,2))}catch(e){console.error('ETA save error',e.message)}}
-function readHubState(){try{return JSON.parse(fs.readFileSync(hubStateFile,'utf8'))}catch{return {entries:[],stops:[],updatedAt:null,revision:0}}}
+const requiredRouteEntries=[
+  {id:100128,date:'2026-09-05',driver:'Me',packages:46,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100129,date:'2026-09-06',driver:'Me',packages:35,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100130,date:'2026-09-07',driver:'Me',packages:32,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100131,date:'2026-09-07',driver:'AJ',packages:30,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100132,date:'2026-09-08',driver:'Me',packages:62,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100133,date:'2026-09-09',driver:'Me',packages:49,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100134,date:'2026-09-10',driver:'Me',packages:47,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100135,date:'2026-09-11',driver:'Me',packages:54,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100136,date:'2026-09-12',driver:'Tisha',packages:47,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100137,date:'2026-09-14',driver:'Tisha',packages:53,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100138,date:'2026-09-15',driver:'Tisha',packages:60,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100139,date:'2026-09-16',driver:'Me',packages:48,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
+  {id:100140,date:'2026-09-17',driver:'Me',packages:37,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'}
+];
+function ensureRequiredEntries(state){
+  const out={...state,entries:Array.isArray(state.entries)?state.entries.map(e=>({...e})):[],stops:Array.isArray(state.stops)?state.stops:[]};
+  const keys=new Set(out.entries.map(e=>e?.date+'|'+e?.driver));
+  for(const e of requiredRouteEntries){const k=e.date+'|'+e.driver;if(!keys.has(k)){out.entries.push({...e});keys.add(k)}}
+  return out;
+}
+function readHubState(){try{return ensureRequiredEntries(JSON.parse(fs.readFileSync(hubStateFile,'utf8')))}catch{return ensureRequiredEntries({entries:[],stops:[],updatedAt:null,revision:0})}}
 function writeHubState(data){try{fs.writeFileSync(hubStateFile,JSON.stringify(data,null,2));return true}catch(e){console.error('Hub state save error',e.message);return false}}
 const packageCorrections={'2026-09-19':44,'2026-09-29':40,'2026-10-05':37};
 const clearedStopDates=new Set(['2026-10-05']);
