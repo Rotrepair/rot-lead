@@ -11,7 +11,7 @@
   const localDateFromIso=(iso)=>{if(!iso)return null;const d=new Date(iso);if(Number.isNaN(d.getTime()))return String(iso).slice(0,10);const off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10)};
   const weekStart=(s)=>{const d=new Date(s+'T12:00:00'),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d.toISOString().slice(0,10)};
   function readStops(){try{const x=JSON.parse(localStorage.getItem(STOP_KEY)||'[]');return Array.isArray(x)?x:[]}catch{return []}}
-  function writeStops(x){try{localStorage.setItem(STOP_KEY,JSON.stringify(x));setTimeout(()=>window.syncHubState?.(),0);return true}catch{return false}}
+  function writeStops(x){try{localStorage.setItem(STOP_KEY,JSON.stringify(x));setTimeout(()=>window.pushHubState?.(),0);return true}catch{return false}}
   // Office correction: clear the stop count for 10/05/2026 and prevent the live feed from restoring it today.
   const CLEARED_STOP_DATES=new Set(['2026-10-05']);
   (function clearOfficeStops(){
