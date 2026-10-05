@@ -88,7 +88,7 @@ async function pushHubState(){
   if(hubPushBusy)return;hubPushBusy=true;
   try{
     const stops=safeParse(localStorage.getItem('amazonHubStops'),[]);
-    const r=await fetch('/api/hub-state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries,stops})});
+    const r=await fetch('/api/hub-state',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify({entries,stops})});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
     if(Array.isArray(data.entries)){entries=data.entries.map(e=>({...e}));localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));}
