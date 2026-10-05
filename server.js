@@ -105,7 +105,11 @@ const server=http.createServer(async(req,res)=>{
   if(reqPath==='/api/hub-state'&&req.method==='GET')return json(res,readHubState());
   if(reqPath==='/api/hub-state'&&req.method==='POST'){
     try{
-      const raw=await collect(req),incoming=JSON.parse(raw||'{}'),merged=mergeHubState(readHubState(),incoming||{});
+      const current=readHubState();
+      // Only the current client may write shared state. Older open tabs used to POST
+      // their whole localStorage every 20 seconds and could overwrite newer data.
+      if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:true,ignoredStaleClient:true,...current});
+      const raw=await collect(req),incoming=JSON.parse(raw||'{}'),merged=mergeHubState(current,incoming||{});
       if(!writeHubState(merged))return json(res,{ok:false,error:'save failed'},500);
       return json(res,{ok:true,...merged});
     }catch(e){console.error('Hub sync error',e.message);return json(res,{ok:false,error:e.message},400)}
