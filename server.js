@@ -178,7 +178,7 @@ const server=http.createServer(async(req,res)=>{
       const html=data.toString('utf8').replace('</body>','<script src="/hub-sheet.js"></script></body>');
       res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store'});return res.end(html);
     }
-    res.writeHead(200,{'Content-Type':type,'Cache-Control':ext==='.html'?'no-store':'public, max-age=60'});res.end(data)
+    res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store, no-cache, must-revalidate','Pragma':'no-cache','Expires':'0'});res.end(data)
   })
 });
 server.listen(port,'0.0.0.0',()=>console.log(`Amazon Hub Tracker running on ${port}`));
