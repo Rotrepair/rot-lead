@@ -3,12 +3,40 @@ const fs=require('fs');
 const path=require('path');
 const port=process.env.PORT||3000;
 const publicDir=path.join(__dirname,'public');
-const etaFile='/tmp/amazon-hub-eta.json';
-const mediaDir='/tmp/amazon-hub-media';
+const dataDir=process.env.HUB_DATA_DIR||'/data';
+try{fs.mkdirSync(dataDir,{recursive:true})}catch{}
+const etaFile=path.join(dataDir,'amazon-hub-eta.json');
+const hubStateFile=path.join(dataDir,'amazon-hub-state.json');
+const mediaDir=path.join(dataDir,'amazon-hub-media');
 try{fs.mkdirSync(mediaDir,{recursive:true})}catch{}
 
 function readEta(){try{return JSON.parse(fs.readFileSync(etaFile,'utf8'))}catch{return {latest:null,todayRoute:null,history:[]}}}
 function writeEta(data){try{fs.writeFileSync(etaFile,JSON.stringify(data,null,2))}catch(e){console.error('ETA save error',e.message)}}
+function readHubState(){try{return JSON.parse(fs.readFileSync(hubStateFile,'utf8'))}catch{return {entries:[],stops:[],updatedAt:null,revision:0}}}
+function writeHubState(data){try{fs.writeFileSync(hubStateFile,JSON.stringify(data,null,2));return true}catch(e){console.error('Hub state save error',e.message);return false}}
+const packageCorrections={'2026-09-19':44,'2026-09-29':40,'2026-10-05':37};
+const clearedStopDates=new Set(['2026-10-05']);
+function hasValue(v){return v!==null&&v!==undefined&&v!==''}
+function mergeHubState(current,incoming){
+  const map=new Map();
+  for(const e of current.entries||[])if(e?.date&&e?.driver)map.set(e.date+'|'+e.driver,{...e});
+  for(const e of incoming.entries||[]){
+    if(!e?.date||!e?.driver)continue;
+    const key=e.date+'|'+e.driver,old=map.get(key)||{},next={...old};
+    for(const f of ['id','date','driver','packages','hours','startMiles','endMiles','miles','expense','source']){
+      if(hasValue(e[f]))next[f]=e[f];
+    }
+    if(packageCorrections[e.date]!=null&&e.driver==='Me')next.packages=packageCorrections[e.date];
+    if(next.startMiles!=null&&next.endMiles!=null&&Number(next.endMiles)>=Number(next.startMiles))next.miles=Number(next.endMiles)-Number(next.startMiles);
+    next.updatedAt=new Date().toISOString(); map.set(key,next);
+  }
+  for(const [key,e] of map){if(packageCorrections[e.date]!=null&&e.driver==='Me')e.packages=packageCorrections[e.date];}
+  const stopMap=new Map();
+  for(const r of current.stops||[])if(r?.date)stopMap.set(r.date,{...r});
+  for(const r of incoming.stops||[])if(r?.date&&!clearedStopDates.has(r.date))stopMap.set(r.date,{...stopMap.get(r.date),...r,updatedAt:new Date().toISOString()});
+  for(const d of clearedStopDates)stopMap.delete(d);
+  return {entries:[...map.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),stops:[...stopMap.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),updatedAt:new Date().toISOString(),revision:Number(current.revision||0)+1};
+}
 function parseMessage(body=''){
   const pkg=body.match(/(\d+)\s*(?:packages?|pkgs?)/i);
   const stops=body.match(/(\d+)\s*(?:stops?|drops?)/i);
@@ -74,6 +102,14 @@ function sameLocalDay(a,b){return a&&b&&String(a).slice(0,10)===String(b).slice(
 
 const server=http.createServer(async(req,res)=>{
   const reqPath=req.url.split('?')[0];
+  if(reqPath==='/api/hub-state'&&req.method==='GET')return json(res,readHubState());
+  if(reqPath==='/api/hub-state'&&req.method==='POST'){
+    try{
+      const raw=await collect(req),incoming=JSON.parse(raw||'{}'),merged=mergeHubState(readHubState(),incoming||{});
+      if(!writeHubState(merged))return json(res,{ok:false,error:'save failed'},500);
+      return json(res,{ok:true,...merged});
+    }catch(e){console.error('Hub sync error',e.message);return json(res,{ok:false,error:e.message},400)}
+  }
   if(reqPath==='/api/eta'&&req.method==='GET')return json(res,readEta());
   if(reqPath==='/api/today-route'&&req.method==='GET')return json(res,readEta().todayRoute||readEta().latest||{});
   if(reqPath==='/api/media-status'&&req.method==='GET'){
