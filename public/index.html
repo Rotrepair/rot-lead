@@ -22,7 +22,7 @@
 
 <div class="section"><h2>Current Totals</h2><div class="grid"><div class="card"><small>Today's Packages</small><div class="big" id="todayPkgs">0</div></div><div class="card"><small>Today's Miles</small><div class="big gold" id="todayMiles">0.0 mi</div></div><div class="card"><small>This Week Miles</small><div class="big gold" id="weekMiles">0.0 mi</div></div><div class="card"><small>This Month Miles</small><div class="big gold" id="monthMiles">0.0 mi</div></div></div><div class="grid"><div class="card"><small>This Week Packages</small><div class="big" id="weekPkgs">0</div><div class="muted" id="weekGoalText"></div><div class="progress"><div id="weekProgress"></div></div></div><div class="card"><small>This Month Revenue</small><div class="big blue" id="monthRev">$0.00</div><div class="muted" id="monthPkgs"></div></div><div class="card"><small>All-Time Net</small><div class="big green" id="allNet">$0.00</div><div class="note" id="allPayLine"></div></div><div class="card"><small>Today's Revenue</small><div class="big blue" id="todayRev">$0.00</div></div></div></div>
 
-<div class="section"><div class="top"><h2>Add Daily Route</h2><div><span class="note">Draft auto-saves while you type.</span><span class="saved" id="saveState"></span></div></div><div class="form"><div><label>Date</label><input id="date" type="date"></div><div><label>Driver</label><select id="driver"><option>Me</option><option>Mom</option><option>Tisha</option><option>AJ</option></select></div><div><label>Packages</label><input id="packages" type="number" min="0"></div><div><label>Hours</label><input id="hours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="startMiles" type="number" min="0" step=".1" placeholder="Before route"></div><div><label>Ending Odometer</label><input id="endMiles" type="number" min="0" step=".1" placeholder="After route"></div><div><label>Daily Miles (auto)</label><input id="miles" type="number" min="0" step=".1" readonly placeholder="End − Start"></div><div><label>Other Expense</label><input id="expense" type="number" min="0" step=".01"></div></div><div class="calcbox"><b>Daily mileage:</b> <span id="mileagePreview">0.0 mi</span><div class="note">Starting and ending odometer can be saved separately. Save the starting reading before the route, then enter the ending reading later; the tracker will complete the same daily route and calculate miles automatically.</div></div><div class="actions"><button class="primary" id="saveBtn" type="button">Save Route</button><button class="secondary" id="csvBtn" type="button">Export CSV</button><button class="secondary" id="backupBtn" type="button">Backup Data</button><button class="secondary" id="restoreBtn" type="button">Restore Imported History</button><button class="danger" id="clearBtn" type="button">Clear All</button></div></div>
+<div class="section"><div class="top"><h2>Add Daily Route</h2><div><span class="note">Today's entries stay filled until the next day. Saved routes remain in history.</span><span class="saved" id="saveState"></span></div></div><div class="form"><div><label>Date</label><input id="date" type="date"></div><div><label>Driver</label><select id="driver"><option>Me</option><option>Mom</option><option>Tisha</option><option>AJ</option></select></div><div><label>Packages</label><input id="packages" type="number" min="0"></div><div><label>Hours</label><input id="hours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="startMiles" type="number" min="0" step=".1" placeholder="Before route"></div><div><label>Ending Odometer</label><input id="endMiles" type="number" min="0" step=".1" placeholder="After route"></div><div><label>Daily Miles (auto)</label><input id="miles" type="number" min="0" step=".1" readonly placeholder="End − Start"></div><div><label>Other Expense</label><input id="expense" type="number" min="0" step=".01"></div></div><div class="calcbox"><b>Daily mileage:</b> <span id="mileagePreview">0.0 mi</span><div class="note">Starting and ending odometer can be saved separately. Save the starting reading before the route, then enter the ending reading later; the tracker will complete the same daily route and calculate miles automatically.</div></div><div class="actions"><button class="primary" id="saveBtn" type="button">Save Route</button><button class="secondary" id="csvBtn" type="button">Export CSV</button><button class="secondary" id="backupBtn" type="button">Backup Data</button><button class="secondary" id="restoreBtn" type="button">Restore Imported History</button><button class="danger" id="clearBtn" type="button">Clear All</button></div></div>
 
 <div class="section"><div class="top"><h2>Performance History</h2><div class="tabs"><button id="dailyBtn" class="tabactive" type="button">Daily</button><button id="weeklyBtn" type="button">Weekly</button><button id="monthlyBtn" type="button">Monthly</button></div></div><div id="summary" class="summarygrid"></div></div>
 <div class="section"><div class="top"><h2>Full Route History</h2><div class="pill" id="historyRange"></div></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Driver</th><th>Packages</th><th>Revenue</th><th>Start Odometer</th><th>End Odometer</th><th>Daily Miles</th><th>Hours</th><th>Pkgs/Hr</th><th>Employee Pay</th><th>Expense</th><th>Net</th><th>Source</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></div>
@@ -30,8 +30,8 @@
 <script src="/history-data.js"></script>
 <script>
 const AMAZON_RATE=2.5,DRIVER_RATE=1.1,WEEKLY_GOAL=350,$=id=>document.getElementById(id),imported=Array.isArray(window.AMAZON_HUB_HISTORY)?window.AMAZON_HUB_HISTORY:[];
-const ENTRY_KEY='amazonHubEntries',DRAFT_KEY='amazonHubDraft';
-let entries=[],view='daily';
+const ENTRY_KEY='amazonHubEntries',DRAFT_KEY='amazonHubDraft',DAILY_DRAFT_PREFIX='amazonHubDailyDraft:';
+let entries=[],view='daily',formDirty=false,activeFormDate='',activeFormDriver='',runningDate='';
 function localDate(){const d=new Date(),off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10)}
 function safeParse(v,fallback){try{const x=JSON.parse(v);return x??fallback}catch{return fallback}}
 const saved=safeParse(localStorage.getItem(ENTRY_KEY),null);entries=Array.isArray(saved)?saved:imported.map(e=>({...e}));
@@ -80,7 +80,10 @@ async function syncHubState(){
     }
     if(Array.isArray(data.stops))localStorage.setItem('amazonHubStops',JSON.stringify(data.stops));
     render();
-    loadSavedRoute($('date').value,$('driver').value);
+    if(!formDirty){
+      if(!loadSavedRoute($('date').value,$('driver').value))clearDailyFields();
+    }
+    window.hubRefreshStopField?.();
   }catch(e){console.warn('Hub sync failed',e.message)}
   finally{hubSyncBusy=false}
 }
@@ -93,16 +96,39 @@ async function pushHubState(){
     const data=await r.json();
     if(Array.isArray(data.entries)){entries=data.entries.map(e=>({...e}));localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));}
     if(Array.isArray(data.stops))localStorage.setItem('amazonHubStops',JSON.stringify(data.stops));
-    render();loadSavedRoute($('date').value,$('driver').value);
+    render();
+    if(!formDirty)loadSavedRoute($('date').value,$('driver').value);
+    window.hubRefreshStopField?.();
     const s=$('saveState');if(s){s.textContent='Synced ✓';setTimeout(()=>{if(s.textContent==='Synced ✓')s.textContent=''},1800)}
   }catch(e){console.warn('Hub push failed',e.message)}
   finally{hubPushBusy=false}
 }
 window.syncHubState=syncHubState;window.pushHubState=pushHubState;
+
+function draftKey(date,driver){return DAILY_DRAFT_PREFIX+date+'|'+encodeURIComponent(driver||'Me')}
 function draftObj(){return{date:$('date').value,driver:$('driver').value,packages:$('packages').value,stops:document.getElementById('stops')?.value??'',hours:$('hours').value,startMiles:$('startMiles').value,endMiles:$('endMiles').value,expense:$('expense').value}}
-function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify(draftObj()))}catch{}preview()}
-function loadDraft(){const d=safeParse(localStorage.getItem(DRAFT_KEY),{});$('date').value=d.date||localDate();$('driver').value=d.driver||'Me';['packages','hours','startMiles','endMiles','expense'].forEach(k=>$(k).value=d[k]??'');const stops=document.getElementById('stops');if(stops&&d.stops!=null)stops.value=d.stops;preview()}
 function preview(){const sr=$('startMiles').value,er=$('endMiles').value,s=Number(sr),e=Number(er),m=sr!==''&&er!==''&&Number.isFinite(s)&&Number.isFinite(e)&&s>0&&e>=s?e-s:0;$('miles').value=m?m.toFixed(1):'';$('mileagePreview').textContent=m.toFixed(1)+' mi'}
+function clearDailyFields(){
+  ['packages','hours','startMiles','endMiles','expense'].forEach(k=>$(k).value='');
+  const stops=document.getElementById('stops');if(stops)stops.value='';
+  preview();formDirty=false;
+}
+function applyDailyDraft(d){
+  ['packages','hours','startMiles','endMiles','expense'].forEach(k=>$(k).value=d[k]??'');
+  const stops=document.getElementById('stops');if(stops)stops.value=d.stops??'';
+  preview();formDirty=true;
+}
+function saveDraft(){
+  const d=draftObj();if(!d.date)return;
+  try{
+    localStorage.setItem(DRAFT_KEY,JSON.stringify(d));
+    localStorage.setItem(draftKey(d.date,d.driver),JSON.stringify(d));
+  }catch(e){console.warn('Draft save failed',e.message)}
+  formDirty=true;preview();
+}
+window.hubSaveDraft=saveDraft;
+window.hubGetActiveDraft=()=>safeParse(localStorage.getItem(draftKey($('date').value,$('driver').value)),null);
+window.hubHasUnsavedDraft=()=>formDirty;
 function loadSavedRoute(date,driver){
   const matches=entries.filter(e=>e.date===date&&e.driver===driver);
   if(!matches.length)return false;
@@ -112,17 +138,51 @@ function loadSavedRoute(date,driver){
   $('startMiles').value=e.startMiles??'';
   $('endMiles').value=e.endMiles??'';
   $('expense').value=e.expense??'';
-  preview();
-  try{localStorage.setItem(DRAFT_KEY,JSON.stringify(draftObj()))}catch{}
+  preview();formDirty=false;
   return true;
+}
+function showSelectedRoute(date,driver){
+  activeFormDate=date;activeFormDriver=driver;
+  const d=safeParse(localStorage.getItem(draftKey(date,driver)),null);
+  if(d){
+    applyDailyDraft(d);
+    try{localStorage.setItem(DRAFT_KEY,JSON.stringify(d))}catch{}
+  }else{
+    if(!loadSavedRoute(date,driver))clearDailyFields();
+    try{localStorage.removeItem(DRAFT_KEY)}catch{}
+  }
+  window.dispatchEvent(new Event('hub:route-selection'));
+}
+function loadDraft(){
+  // Migrate any older device-only draft to its original day, never into the new day.
+  const legacy=safeParse(localStorage.getItem(DRAFT_KEY),null);
+  if(legacy?.date&&legacy?.driver){
+    const key=draftKey(legacy.date,legacy.driver);
+    try{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(legacy))}catch{}
+  }
+  const today=localDate();runningDate=today;
+  $('date').value=today;$('driver').value='Me';
+  showSelectedRoute(today,'Me');
+}
+function switchRouteSelection(){showSelectedRoute($('date').value,$('driver').value)}
+function checkDailyRollover(){
+  const today=localDate();if(today===runningDate)return;
+  // Unsaved input remains recoverable by picking its original date and driver.
+  if(formDirty&&activeFormDate&&activeFormDriver){
+    const d={...draftObj(),date:activeFormDate,driver:activeFormDriver};
+    try{localStorage.setItem(draftKey(activeFormDate,activeFormDriver),JSON.stringify(d))}catch{}
+  }
+  runningDate=today;$('date').value=today;$('driver').value='Me';
+  showSelectedRoute(today,'Me');
+  render();syncHubState();
 }
 function addEntry(){
   const date=$('date').value,driver=$('driver').value;
-  const pr=$('packages').value.trim(),hr=$('hours').value.trim(),sr=$('startMiles').value.trim(),er=$('endMiles').value.trim(),xr=$('expense').value.trim();
+  const pr=$('packages').value.trim(),hr=$('hours').value.trim(),sr=$('startMiles').value.trim(),er=$('endMiles').value.trim(),xr=$('expense').value.trim(),st=document.getElementById('stops')?.value.trim()??'';
   const hasPackages=pr!=='',hasHours=hr!=='',hasStart=sr!=='',hasEnd=er!=='',hasExpense=xr!=='';
   const packages=Number(pr||0),hours=Number(hr||0),start=hasStart?Number(sr):null,end=hasEnd?Number(er):null,expense=Number(xr||0);
   if(!date)return alert('Choose a date.');
-  if(!hasPackages&&!hasHours&&!hasStart&&!hasEnd&&!hasExpense)return alert('Enter at least one daily number. Starting or ending odometer can be saved by itself.');
+  if(!hasPackages&&!hasHours&&!hasStart&&!hasEnd&&!hasExpense&&st==='')return alert('Enter at least one daily value (including stops).');
   if(hasStart&&(!Number.isFinite(start)||start<0))return alert('Enter a valid starting odometer reading.');
   if(hasEnd&&(!Number.isFinite(end)||end<0))return alert('Enter a valid ending odometer reading.');
   if(hasStart&&hasEnd&&end<start)return alert('Ending odometer must be greater than or equal to starting odometer.');
@@ -155,7 +215,7 @@ function addEntry(){
     entries.push(e);if(!persist()){entries.pop();return}
   }
   // Keep the saved values visible after Save Route so the full daily route can be reviewed and edited.
-  localStorage.removeItem(DRAFT_KEY);$('date').value=date;$('driver').value=driver;
+  localStorage.removeItem(DRAFT_KEY);localStorage.removeItem(draftKey(date,driver));formDirty=false;$('date').value=date;$('driver').value=driver;
   $('packages').value=hasPackages?packages:(entries[matchIndex>=0?matchIndex:entries.length-1]?.packages??'');
   $('hours').value=hasHours?hours:(entries[matchIndex>=0?matchIndex:entries.length-1]?.hours??'');
   $('startMiles').value=hasStart?start:(entries[matchIndex>=0?matchIndex:entries.length-1]?.startMiles??'');
@@ -167,14 +227,19 @@ function del(id){entries=entries.filter(e=>String(e.id)!==String(id));persist();
 function restoreHistory(){const manual=entries.filter(e=>!String(e.source||'').startsWith('Imported'));entries=[...imported.map(e=>({...e})),...manual];persist();render()}
 function clearAll(){if(confirm('Delete all saved route data from this browser?')){entries=[];persist();render()}}
 function groupKey(e){return view==='daily'?e.date:view==='weekly'?startOfWeek(e.date):e.date.slice(0,7)}
-function render(){const today=localDate(),week=startOfWeek(today),month=today.slice(0,7),at=totals(entries),tt=totals(entries.filter(e=>e.date===today)),wt=totals(entries.filter(e=>startOfWeek(e.date)===week)),mt=totals(entries.filter(e=>String(e.date||'').slice(0,7)===month)),md=entries.filter(e=>routeMiles(e)>0).length;$('allPkgs').textContent=at.pkgs.toLocaleString();$('allRev').textContent=money(at.rev);$('allHours').textContent=at.hours.toFixed(1);$('avgPph').textContent=(at.hours?at.pkgs/at.hours:0).toFixed(1)+' pkgs/hr';$('allMiles').textContent=at.miles.toFixed(1)+' mi';$('avgMilesDay').textContent=(md?at.miles/md:0).toFixed(1)+' mi/day';$('allNet').textContent=money(at.net);$('allPayLine').textContent='Mom payroll '+money(at.pay);$('historyDays').textContent=entries.filter(e=>Number(e.packages||0)>0||e.startMiles!=null||e.endMiles!=null||routeMiles(e)>0||Number(e.hours||0)>0||Number(e.expense||0)>0).length+' recorded days';$('todayPkgs').textContent=tt.pkgs;$('todayRev').textContent=money(tt.rev);$('todayMiles').textContent=tt.miles.toFixed(1)+' mi';$('weekMiles').textContent=wt.miles.toFixed(1)+' mi';$('monthMiles').textContent=mt.miles.toFixed(1)+' mi';$('weekPkgs').textContent=wt.pkgs;$('weekGoalText').textContent=`${wt.pkgs} / ${WEEKLY_GOAL} (${Math.min(100,Math.round((wt.pkgs/WEEKLY_GOAL)*100))}%)`;$('weekProgress').style.width=Math.min(100,(wt.pkgs/WEEKLY_GOAL)*100)+'%';$('monthRev').textContent=money(mt.rev);$('monthPkgs').textContent=mt.pkgs+' packages';const dates=entries.map(e=>e.date).filter(Boolean).sort();$('historyRange').textContent=dates.length?dates[0]+' → '+dates[dates.length-1]:'No history';$('rows').innerHTML=entries.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(e=>{const c=calc(e),m=routeMiles(e);return `<tr><td>${e.date}</td><td>${e.driver}</td><td>${e.packages||0}</td><td>${money(c.rev)}</td><td>${e.startMiles??'—'}</td><td>${e.endMiles??'—'}</td><td>${m.toFixed(1)}</td><td>${Number(e.hours||0).toFixed(2)}</td><td>${c.pph.toFixed(1)}</td><td>${money(c.pay)}</td><td>${money(e.expense)}</td><td>${money(c.net)}</td><td>${e.source||''}</td><td><button type="button" onclick="del('${e.id}')">Delete</button></td></tr>`}).join('');const groups={};entries.forEach(e=>{const k=groupKey(e);if(!k)return;if(!groups[k])groups[k]=[];groups[k].push(e)});$('summary').innerHTML=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,24).map(([k,list])=>{const g=totals(list);return `<div class="card"><small>${view==='weekly'?'Week of ':view==='monthly'?'Month ':'Date '}${k}</small><div class="big">${g.pkgs} pkgs</div><div class="muted">Revenue ${money(g.rev)} • ${g.hours.toFixed(1)} hrs</div><div class="gold"><b>${g.miles.toFixed(1)} miles</b></div><div class="green"><b>Net ${money(g.net)}</b></div></div>`}).join('')||'<div class="muted">No route data yet.</div>'}
+function render(){const today=localDate(),week=startOfWeek(today),month=today.slice(0,7),at=totals(entries),tt=totals(entries.filter(e=>e.date===today)),wt=totals(entries.filter(e=>startOfWeek(e.date)===week)),mt=totals(entries.filter(e=>String(e.date||'').slice(0,7)===month)),md=entries.filter(e=>routeMiles(e)>0).length;$('allPkgs').textContent=at.pkgs.toLocaleString();$('allRev').textContent=money(at.rev);$('allHours').textContent=at.hours.toFixed(1);$('avgPph').textContent=(at.hours?at.pkgs/at.hours:0).toFixed(1)+' pkgs/hr';$('allMiles').textContent=at.miles.toFixed(1)+' mi';$('avgMilesDay').textContent=(md?at.miles/md:0).toFixed(1)+' mi/day';$('allNet').textContent=money(at.net);$('allPayLine').textContent='Driver payroll '+money(at.pay);$('historyDays').textContent=entries.filter(e=>Number(e.packages||0)>0||e.startMiles!=null||e.endMiles!=null||routeMiles(e)>0||Number(e.hours||0)>0||Number(e.expense||0)>0).length+' recorded days';$('todayPkgs').textContent=tt.pkgs;$('todayRev').textContent=money(tt.rev);$('todayMiles').textContent=tt.miles.toFixed(1)+' mi';$('weekMiles').textContent=wt.miles.toFixed(1)+' mi';$('monthMiles').textContent=mt.miles.toFixed(1)+' mi';$('weekPkgs').textContent=wt.pkgs;$('weekGoalText').textContent=`${wt.pkgs} / ${WEEKLY_GOAL} (${Math.min(100,Math.round((wt.pkgs/WEEKLY_GOAL)*100))}%)`;$('weekProgress').style.width=Math.min(100,(wt.pkgs/WEEKLY_GOAL)*100)+'%';$('monthRev').textContent=money(mt.rev);$('monthPkgs').textContent=mt.pkgs+' packages';const dates=entries.map(e=>e.date).filter(Boolean).sort();$('historyRange').textContent=dates.length?dates[0]+' → '+dates[dates.length-1]:'No history';$('rows').innerHTML=entries.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(e=>{const c=calc(e),m=routeMiles(e);return `<tr><td>${e.date}</td><td>${e.driver}</td><td>${e.packages||0}</td><td>${money(c.rev)}</td><td>${e.startMiles??'—'}</td><td>${e.endMiles??'—'}</td><td>${m.toFixed(1)}</td><td>${Number(e.hours||0).toFixed(2)}</td><td>${c.pph.toFixed(1)}</td><td>${money(c.pay)}</td><td>${money(e.expense)}</td><td>${money(c.net)}</td><td>${e.source||''}</td><td><button type="button" onclick="del('${e.id}')">Delete</button></td></tr>`}).join('');const groups={};entries.forEach(e=>{const k=groupKey(e);if(!k)return;if(!groups[k])groups[k]=[];groups[k].push(e)});$('summary').innerHTML=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,24).map(([k,list])=>{const g=totals(list);return `<div class="card"><small>${view==='weekly'?'Week of ':view==='monthly'?'Month ':'Date '}${k}</small><div class="big">${g.pkgs} pkgs</div><div class="muted">Revenue ${money(g.rev)} • ${g.hours.toFixed(1)} hrs</div><div class="gold"><b>${g.miles.toFixed(1)} miles</b></div><div class="green"><b>Net ${money(g.net)}</b></div></div>`}).join('')||'<div class="muted">No route data yet.</div>'}
 function setView(v){view=v;['daily','weekly','monthly'].forEach(x=>$(x+'Btn').classList.toggle('tabactive',x===v));render()}
 async function refreshEta(){try{const r=await fetch('/api/eta',{cache:'no-store'}),d=await r.json(),e=d.latest;if(!e)return;$('etaDriver').textContent=e.driver||'Driver';$('etaPackages').textContent=e.packages??'—';$('etaTime').textContent=e.eta||'—';$('etaStatus').textContent=e.status||'Update received';$('etaMessage').textContent=e.body||'';$('etaReceived').textContent=e.receivedAt?new Date(e.receivedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'—'}catch{}}
 function exportCSV(){const head=['Date','Driver','Packages','Revenue','Start Odometer','End Odometer','Daily Miles','Hours','Packages per Hour','Employee Pay','Other Expense','Net','Source'],lines=[head.join(',')];entries.forEach(e=>{const c=calc(e);lines.push([e.date,e.driver,e.packages||0,c.rev.toFixed(2),e.startMiles??'',e.endMiles??'',routeMiles(e).toFixed(1),Number(e.hours||0).toFixed(2),c.pph.toFixed(2),c.pay.toFixed(2),Number(e.expense||0).toFixed(2),c.net.toFixed(2),e.source||''].join(','))});download('amazon-hub-routes.csv',lines.join('\n'),'text/csv')}
 function downloadBackup(){download('amazon-hub-backup.json',JSON.stringify(entries,null,2),'application/json')}
 function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 ['packages','hours','startMiles','endMiles','expense'].forEach(id=>$(id).addEventListener('input',saveDraft));
-$('date').addEventListener('change',()=>{if(!loadSavedRoute($('date').value,$('driver').value))saveDraft()});
-$('driver').addEventListener('change',()=>{if(!loadSavedRoute($('date').value,$('driver').value))saveDraft()});$('saveBtn').addEventListener('click',addEntry);$('csvBtn').addEventListener('click',exportCSV);$('backupBtn').addEventListener('click',downloadBackup);$('restoreBtn').addEventListener('click',restoreHistory);$('clearBtn').addEventListener('click',clearAll);$('dailyBtn').addEventListener('click',()=>setView('daily'));$('weeklyBtn').addEventListener('click',()=>setView('weekly'));$('monthlyBtn').addEventListener('click',()=>setView('monthly'));
-loadDraft();loadSavedRoute($('date').value,$('driver').value);render();syncHubState();refreshEta();setInterval(refreshEta,15000);setInterval(syncHubState,10000);
+$('date').addEventListener('change',switchRouteSelection);
+$('driver').addEventListener('change',switchRouteSelection);
+$('saveBtn').addEventListener('click',addEntry);$('csvBtn').addEventListener('click',exportCSV);$('backupBtn').addEventListener('click',downloadBackup);$('restoreBtn').addEventListener('click',restoreHistory);$('clearBtn').addEventListener('click',clearAll);$('dailyBtn').addEventListener('click',()=>setView('daily'));$('weeklyBtn').addEventListener('click',()=>setView('weekly'));$('monthlyBtn').addEventListener('click',()=>setView('monthly'));
+loadDraft();render();syncHubState();refreshEta();
+setInterval(refreshEta,15000);setInterval(syncHubState,10000);
+setInterval(checkDailyRollover,15000);
+window.addEventListener('focus',checkDailyRollover);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkDailyRollover()});
 </script></body></html>
