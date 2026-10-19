@@ -11,15 +11,24 @@
   const localDateFromIso=(iso)=>{if(!iso)return null;const d=new Date(iso);if(Number.isNaN(d.getTime()))return String(iso).slice(0,10);const off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10)};
   const weekStart=(s)=>{const d=new Date(s+'T12:00:00'),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d.toISOString().slice(0,10)};
   function readStops(){try{const x=JSON.parse(localStorage.getItem(STOP_KEY)||'[]');return Array.isArray(x)?x:[]}catch{return []}}
-  function writeStops(x){try{localStorage.setItem(STOP_KEY,JSON.stringify(x));setTimeout(()=>window.pushHubState?.(),0);return true}catch{return false}}
+  function writeStops(x,push=true){try{localStorage.setItem(STOP_KEY,JSON.stringify(x));if(push)setTimeout(()=>window.pushHubState?.(),0);return true}catch{return false}}
   // Office correction: clear the stop count for 10/05/2026 and prevent the live feed from restoring it today.
   const CLEARED_STOP_DATES=new Set(['2026-10-05']);
   (function clearOfficeStops(){
     const rows=readStops().filter(r=>!CLEARED_STOP_DATES.has(r.date));
-    writeStops(rows);
+    writeStops(rows,false);
   })();
   function readEntries(){try{const x=JSON.parse(localStorage.getItem(ENTRY_KEY)||'[]');return Array.isArray(x)?x:[]}catch{return []}}
-  function upsertStop(date,stops,source){if(!date||!Number.isFinite(Number(stops))||Number(stops)<0)return;const n=Number(stops),rows=readStops(),i=rows.findIndex(r=>r.date===date);const rec={date,stops:n,source:source||'Manual',updatedAt:new Date().toISOString()};if(i>=0)rows[i]={...rows[i],...rec};else rows.push(rec);writeStops(rows);renderStopStats()}
+  function upsertStop(date,stops,source){
+    if(!date||!Number.isFinite(Number(stops))||Number(stops)<0)return;
+    const n=Number(stops),rows=readStops(),i=rows.findIndex(r=>r.date===date);
+    // Explicit office edits must not be replaced by an older incoming Hub text.
+    if(i>=0&&source==='Hub SMS/MMS'&&rows[i].source==='Manual')return;
+    if(i>=0&&Number(rows[i].stops)===n&&rows[i].source===source)return;
+    const rec={date,stops:n,source:source||'Manual',updatedAt:new Date().toISOString()};
+    if(i>=0)rows[i]={...rows[i],...rec};else rows.push(rec);
+    writeStops(rows);renderStopStats();
+  }
   function totalFor(pred){return readStops().filter(pred).reduce((s,r)=>s+Number(r.stops||0),0)}
   function routeHours(date){return readEntries().filter(r=>r.date===date).reduce((s,r)=>s+Number(r.hours||0),0)}
   function localPackageTotals(){
@@ -51,15 +60,21 @@
     const stopsInput=document.getElementById('stops');
     const dateInput=document.getElementById('date');
     const existing=readStops().find(r=>r.date===(dateInput?.value||localDate()));if(existing)stopsInput.value=existing.stops;
-    const draft=(()=>{try{return JSON.parse(localStorage.getItem('amazonHubDraft')||'{}')}catch{return {}}})();if(stopsInput&&draft.stops!=null&&draft.stops!=='')stopsInput.value=draft.stops;
-    stopsInput?.addEventListener('input',()=>{try{const d=JSON.parse(localStorage.getItem('amazonHubDraft')||'{}');d.stops=stopsInput.value;localStorage.setItem('amazonHubDraft',JSON.stringify(d))}catch{}});
-    const loadSavedStops=()=>{const r=readStops().find(x=>x.date===dateInput.value);stopsInput.value=r?.stops??''};
+    const loadSavedStops=()=>{
+      const draft=window.hubGetActiveDraft?.();
+      const r=readStops().find(x=>x.date===dateInput.value);
+      stopsInput.value=draft?.stops!==undefined?draft.stops:(r?.stops??'');
+    };
+    stopsInput?.addEventListener('input',()=>window.hubSaveDraft?.());
     dateInput?.addEventListener('change',loadSavedStops);
     document.getElementById('driver')?.addEventListener('change',loadSavedStops);
+    window.addEventListener('hub:route-selection',loadSavedStops);
+    window.hubRefreshStopField=()=>{if(!window.hubHasUnsavedDraft?.())loadSavedStops()};
+    loadSavedStops();
     document.getElementById('saveBtn')?.addEventListener('click',()=>{
       const date=dateInput?.value||localDate(),v=stopsInput?.value;
       if(v!==''&&Number(v)>=0){upsertStop(date,Number(v),'Manual');const s=document.getElementById('stopSaveState');if(s){s.textContent='Stops saved ✓';setTimeout(()=>s.textContent='Stops tracked separately from packages',1800)}}
-    },true);
+    });
   }
 
   function renderStopStats(){
@@ -113,7 +128,7 @@
       document.getElementById('hubReceived').textContent='Live • '+(e.receivedAt?new Date(e.receivedAt).toLocaleString():'')+(e.body?' • '+e.body:'');
       const media=document.getElementById('hubMedia');
       if(Array.isArray(e.media)&&e.media.length){media.innerHTML='<b>Hub sheet attached:</b> '+e.media.map((m,i)=>`<a href="/api/media/${i}?v=${encodeURIComponent(e.id)}" target="_blank" rel="noopener">Attachment ${i+1}</a>`).join(' • ')} else media.innerHTML='';
-      if(e.stops!=null&&!CLEARED_STOP_DATES.has(routeDate)){upsertStop(routeDate,Number(e.stops),'Hub SMS/MMS');const input=document.getElementById('stops');const date=document.getElementById('date');if(input&&date?.value===routeDate)input.value=e.stops}else if(CLEARED_STOP_DATES.has(routeDate)){const input=document.getElementById('stops');const date=document.getElementById('date');if(input&&date?.value===routeDate)input.value=''}
+      if(e.stops!=null&&!CLEARED_STOP_DATES.has(routeDate)){upsertStop(routeDate,Number(e.stops),'Hub SMS/MMS');const input=document.getElementById('stops');const date=document.getElementById('date');if(input&&date?.value===routeDate&&!window.hubHasUnsavedDraft?.())input.value=e.stops}else if(CLEARED_STOP_DATES.has(routeDate)){const input=document.getElementById('stops');const date=document.getElementById('date');if(input&&date?.value===routeDate)input.value=''}
       applyLivePackageCards(e);
       if(lastId!==e.id){lastId=e.id;try{localStorage.setItem('amazonHubLatestDispatch',JSON.stringify(e))}catch{}}
     }catch(err){clearLiveDisplay('Could not refresh live feed. Check connection and try Refresh Now.');}
