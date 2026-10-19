@@ -66,7 +66,7 @@ function routeMiles(e){const s=Number(e.startMiles),x=Number(e.endMiles);return 
 function calc(e){const rev=Number(e.packages||0)*AMAZON_RATE,pay=e.driver==='Me'?0:Number(e.packages||0)*DRIVER_RATE,net=rev-pay-Number(e.expense||0);return{rev,pay,net,pph:Number(e.hours||0)>0?Number(e.packages||0)/Number(e.hours):0}}
 function startOfWeek(d){const x=new Date(d+'T12:00:00'),day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x.toISOString().slice(0,10)}
 function totals(list){return list.reduce((t,e)=>{const c=calc(e);t.pkgs+=Number(e.packages||0);t.rev+=c.rev;t.pay+=c.pay;t.exp+=Number(e.expense||0);t.net+=c.net;t.hours+=Number(e.hours||0);t.miles+=routeMiles(e);return t},{pkgs:0,rev:0,pay:0,exp:0,net:0,hours:0,miles:0})}
-function persist(){try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));$('saveState').textContent='Saved ✓';setTimeout(()=>{$('saveState').textContent=''},1800);window.pushHubState?.();return true}catch(e){alert('Could not save route data on this device: '+e.message);return false}}
+function persist(){try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));$('saveState').textContent='Saved locally • syncing…';window.pushHubState?.();return true}catch(e){alert('Could not save route data on this device: '+e.message);return false}}
 let hubSyncBusy=false,hubPushBusy=false,hubPushPending=false;
 async function syncHubState(){
   if(hubSyncBusy)return;hubSyncBusy=true;
@@ -101,7 +101,10 @@ async function pushHubState(){
     if(!formDirty)loadSavedRoute($('date').value,$('driver').value);
     window.hubRefreshStopField?.();
     const s=$('saveState');if(s){s.textContent='Synced ✓';setTimeout(()=>{if(s.textContent==='Synced ✓')s.textContent=''},1800)}
-  }catch(e){console.warn('Hub push failed',e.message)}
+  }catch(e){
+    console.warn('Hub push failed',e.message);
+    const s=$('saveState');if(s)s.textContent='Offline — saved on this device only';
+  }
   finally{
     hubPushBusy=false;
     if(hubPushPending){hubPushPending=false;pushHubState()}
