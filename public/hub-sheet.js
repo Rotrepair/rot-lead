@@ -128,7 +128,7 @@
       document.getElementById('hubReceived').textContent='Live • '+(e.receivedAt?new Date(e.receivedAt).toLocaleString():'')+(e.body?' • '+e.body:'');
       const media=document.getElementById('hubMedia');
       if(Array.isArray(e.media)&&e.media.length){media.innerHTML='<b>Hub sheet attached:</b> '+e.media.map((m,i)=>`<a href="/api/media/${i}?v=${encodeURIComponent(e.id)}" target="_blank" rel="noopener">Attachment ${i+1}</a>`).join(' • ')} else media.innerHTML='';
-      if(e.stops!=null&&!CLEARED_STOP_DATES.has(routeDate)){upsertStop(routeDate,Number(e.stops),'Hub SMS/MMS');const input=document.getElementById('stops');const date=document.getElementById('date');if(input&&date?.value===routeDate&&!window.hubHasUnsavedDraft?.())input.value=e.stops}else if(CLEARED_STOP_DATES.has(routeDate)){const input=document.getElementById('stops');const date=document.getElementById('date');if(input&&date?.value===routeDate)input.value=''}
+      if(e.stops!=null&&!CLEARED_STOP_DATES.has(routeDate)){upsertStop(routeDate,Number(e.stops),'Hub SMS/MMS');const input=document.getElementById('stops');const date=document.getElementById('date');if(input&&date?.value===routeDate&&!window.hubHasUnsavedDraft?.()){const saved=readStops().find(x=>x.date===routeDate);input.value=saved?.stops??e.stops}}else if(CLEARED_STOP_DATES.has(routeDate)){const input=document.getElementById('stops');const date=document.getElementById('date');if(input&&date?.value===routeDate)input.value=''}
       applyLivePackageCards(e);
       if(lastId!==e.id){lastId=e.id;try{localStorage.setItem('amazonHubLatestDispatch',JSON.stringify(e))}catch{}}
     }catch(err){clearLiveDisplay('Could not refresh live feed. Check connection and try Refresh Now.');}
