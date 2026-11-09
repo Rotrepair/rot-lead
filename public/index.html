@@ -10,7 +10,7 @@
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}.card,.section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.section{margin:14px 0}.big{font-size:27px;font-weight:800;margin-top:5px}.green{color:#86efac}.blue{color:#7dd3fc}.gold{color:#fcd34d}
 .form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.form label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}input,select,button{width:100%;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#fff;padding:10px}button{cursor:pointer;font-weight:700}.primary{background:var(--blue)}.secondary{background:#1e293b}.danger{background:#7f1d1d}
 .actions,.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button,.tabs button{width:auto}.tabactive{background:#0369a1}.tablewrap{overflow:auto;max-height:620px}table{width:100%;border-collapse:collapse;min-width:1250px}th,td{padding:9px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}th{background:#0b1220;position:sticky;top:0}.summarygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.pill{padding:5px 9px;border-radius:999px;background:#1e293b;color:#cbd5e1;font-size:12px}.progress{height:10px;background:#0b1220;border:1px solid #334155;border-radius:999px;overflow:hidden;margin-top:8px}.progress div{height:100%;background:var(--green)}.calcbox{padding:12px;border:1px solid #334155;border-radius:12px;margin-top:10px}.note{font-size:12px;margin-top:5px}.eta{border-color:var(--blue)}.status{display:inline-block;padding:4px 8px;border-radius:999px;background:#082f49;color:#7dd3fc;font-size:12px}.saved{display:inline-block;margin-left:8px;color:#86efac;font-size:13px;font-weight:700}
-.filters{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:10px 0}.filters label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}.rowbtn{width:auto;padding:5px 9px;font-size:12px;margin-right:4px}td.rowact,th.rowact{position:sticky;right:0;background:#111827;white-space:nowrap}th.rowact{background:#0b1220}.modalbg{position:fixed;inset:0;background:rgba(2,6,23,.75);display:none;align-items:center;justify-content:center;z-index:50;padding:12px}.modalbg.open{display:flex}.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:640px;width:100%}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.chip{display:inline-flex;gap:6px;align-items:center;padding:5px 10px;border-radius:999px;background:#1e293b;font-size:13px}.chip button{width:auto;padding:0 6px;border:0;background:none;color:#fca5a5}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:10px 0}.filters label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}.rowbtn{width:auto;padding:5px 9px;font-size:12px;margin-right:4px}td.rowact,th.rowact{position:sticky;right:0;background:#111827;white-space:nowrap}th.rowact{background:#0b1220}.modalbg{position:fixed;inset:0;background:rgba(2,6,23,.75);display:none;align-items:center;justify-content:center;z-index:50;padding:12px}.modalbg.open{display:flex}.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:720px;width:100%;max-height:92vh;overflow:auto}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.chip{display:inline-flex;gap:6px;align-items:center;padding:5px 10px;border-radius:999px;background:#1e293b;font-size:13px}.chip button{width:auto;padding:0 6px;border:0;background:none;color:#fca5a5}.rosterlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.person,.qitem{border:1px solid var(--line);border-radius:12px;padding:12px;background:#0b1220}.person b{font-size:16px}.queue{display:flex;flex-direction:column;gap:8px}.checkrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}.checkrow label{display:flex;gap:6px;align-items:center;color:var(--text);font-size:13px}.hiring{border-color:#f59e0b}a.pill{text-decoration:none}
 @media(max-width:900px){.filters{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:repeat(2,1fr)}.summarygrid{grid-template-columns:1fr}}@media(max-width:520px){.grid,.form{grid-template-columns:1fr}}
 </style>
@@ -24,13 +24,16 @@
 
 <div class="section"><h2>Current Totals</h2><div class="grid"><div class="card"><small>Today's Packages</small><div class="big" id="todayPkgs">0</div></div><div class="card"><small>Today's Miles</small><div class="big gold" id="todayMiles">0.0 mi</div></div><div class="card"><small>This Week Miles</small><div class="big gold" id="weekMiles">0.0 mi</div></div><div class="card"><small>This Month Miles</small><div class="big gold" id="monthMiles">0.0 mi</div></div></div><div class="grid"><div class="card"><small>This Week Packages</small><div class="big" id="weekPkgs">0</div><div class="muted" id="weekGoalText"></div><div class="progress"><div id="weekProgress"></div></div></div><div class="card"><small>This Month Revenue</small><div class="big blue" id="monthRev">$0.00</div><div class="muted" id="monthPkgs"></div></div><div class="card"><small>All-Time Net</small><div class="big green" id="allNet">$0.00</div><div class="note" id="allPayLine"></div></div><div class="card"><small>Today's Revenue</small><div class="big blue" id="todayRev">$0.00</div></div></div></div>
 
-<div class="section"><div class="top"><h2>Add Daily Route</h2><div><span class="note">Today's entries stay filled until the next day. Saved routes remain in history.</span><span class="saved" id="saveState"></span></div></div><div class="form"><div><label>Date</label><input id="date" type="date"></div><div><label>Driver</label><select id="driver" class="driverSelect"><option>Me</option><option>Mom</option><option>Tisha</option><option>AJ</option><option>Suzanne</option></select></div><div><label>Packages</label><input id="packages" type="number" min="0"></div><div><label>Hours</label><input id="hours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="startMiles" type="number" min="0" step=".1" placeholder="Before route"></div><div><label>Ending Odometer</label><input id="endMiles" type="number" min="0" step=".1" placeholder="After route"></div><div><label>Daily Miles (auto)</label><input id="miles" type="number" min="0" step=".1" readonly placeholder="End − Start"></div><div><label>Other Expense</label><input id="expense" type="number" min="0" step=".01"></div></div><div class="calcbox"><b>Daily mileage:</b> <span id="mileagePreview">0.0 mi</span><div class="note">Starting and ending odometer can be saved separately. Save the starting reading before the route, then enter the ending reading later; the tracker will complete the same daily route and calculate miles automatically.</div></div><div class="actions"><button class="primary" id="saveBtn" type="button">Save Route</button><button class="secondary" id="csvBtn" type="button">Export CSV</button><button class="secondary" id="backupBtn" type="button">Backup Data</button><button class="secondary" id="restoreBtn" type="button">Restore Imported History</button><button class="danger" id="clearBtn" type="button">Clear All</button></div></div>
+<div class="section"><div class="top"><h2>Add Daily Route</h2><div><span class="note">Today's entries stay filled until the next day. Saved routes remain in history.</span><span class="saved" id="saveState"></span></div></div><div class="form"><div><label>Date</label><input id="date" type="date"></div><div><label>Driver</label><select id="driver" class="driverSelect"><option value="Me">Eric</option><option value="Valerie">Val</option><option>Suzanne</option><option>Brianna</option><option>Ronna</option></select></div><div><label>Hub</label><select id="routeHub"><option>Right On Time Repair</option><option>SMG Logistics</option></select></div><div><label>Packages</label><input id="packages" type="number" min="0"></div><div><label>Hours</label><input id="hours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="startMiles" type="number" min="0" step=".1" placeholder="Before route"></div><div><label>Ending Odometer</label><input id="endMiles" type="number" min="0" step=".1" placeholder="After route"></div><div><label>Daily Miles (auto)</label><input id="miles" type="number" min="0" step=".1" readonly placeholder="End − Start"></div><div><label>Other Expense</label><input id="expense" type="number" min="0" step=".01"></div></div><div class="calcbox"><b>Daily mileage:</b> <span id="mileagePreview">0.0 mi</span><div class="note">Starting and ending odometer can be saved separately. Save the starting reading before the route, then enter the ending reading later; the tracker will complete the same daily route and calculate miles automatically.</div></div><div class="actions"><button class="primary" id="saveBtn" type="button">Save Route</button><button class="secondary" id="csvBtn" type="button">Export CSV</button><button class="secondary" id="backupBtn" type="button">Backup Data</button><button class="secondary" id="restoreBtn" type="button">Restore Imported History</button><button class="danger" id="clearBtn" type="button">Clear All</button></div></div>
 
+<div class="section" id="intakeSection"><div class="top"><h2>Packages Received</h2><span class="note">Enter the hub total for a day. Driver routes stay the delivered record. An approved request counts as assigned until that driver has a route for the same day and hub.</span></div><div class="form"><div><label>Date</label><input id="inDate" type="date"></div><div><label>Hub</label><select id="inHub"><option>Right On Time Repair</option><option>SMG Logistics</option></select></div><div><label>Total packages received</label><input id="inPackages" type="number" min="0" step="1"></div><div><label>&nbsp;</label><button class="primary" id="inSave" type="button">Save Count</button></div></div><div class="grid"><div class="card"><small>Received</small><div class="big" id="inReceived">0</div></div><div class="card"><small>Assigned</small><div class="big blue" id="inAssigned">0</div><div class="note" id="inAssignedDetail"></div></div><div class="card"><small>Remaining</small><div class="big gold" id="inRemaining">0</div></div><div class="card"><small id="inDay">Available</small><div class="note" id="inPeople">—</div></div></div></div>
+<div class="section"><div class="top"><h2>Delivery Requests</h2><a class="pill" href="/request">Driver link: /request</a></div><div id="requestQueue" class="queue"></div></div>
 <div class="section"><div class="top"><h2>Performance History</h2><div class="tabs"><button id="dailyBtn" class="tabactive" type="button">Daily</button><button id="weeklyBtn" type="button">Weekly</button><button id="monthlyBtn" type="button">Monthly</button></div></div><div id="summary" class="summarygrid"></div></div>
-<div class="section"><div class="top"><h2>Full Route History</h2><div class="pill" id="historyRange"></div></div><div class="filters"><div><label>Driver</label><select id="fDriver"><option value="">All drivers</option></select></div><div><label>From</label><input id="fFrom" type="date"></div><div><label>To</label><input id="fTo" type="date"></div><div><label>Sort by</label><select id="fSort"><option value="date-desc">Date (newest first)</option><option value="date-asc">Date (oldest first)</option><option value="driver">Driver A–Z</option><option value="pkgs-desc">Packages (most first)</option><option value="pkgs-asc">Packages (fewest first)</option></select></div><div><label>&nbsp;</label><button class="secondary" id="fReset" type="button">Reset filters</button></div></div><div class="note" id="filterTotals"></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Driver</th><th>Packages</th><th>Revenue</th><th>Start Odometer</th><th>End Odometer</th><th>Daily Miles</th><th>Hours</th><th>Pkgs/Hr</th><th>Employee Pay</th><th>Expense</th><th>Net</th><th>Source</th><th class="rowact">Actions</th></tr></thead><tbody id="rows"></tbody></table></div></div>
-<div class="section"><div class="top"><h2>Drivers</h2><span class="note">Drivers shown in the dropdowns. Removing a name here does not delete any of their entries.</span></div><div class="chips" id="driverChips"></div><div class="actions"><input id="newDriver" placeholder="Add a driver name" style="max-width:260px"><button class="secondary" id="addDriverBtn" type="button">Add Driver</button></div></div>
+<div class="section"><div class="top"><h2>Full Route History</h2><div class="pill" id="historyRange"></div></div><div class="filters"><div><label>Driver</label><select id="fDriver"><option value="">All drivers</option></select></div><div><label>Hub</label><select id="fHub"><option value="">All hubs</option><option>Right On Time Repair</option><option>SMG Logistics</option></select></div><div><label>From</label><input id="fFrom" type="date"></div><div><label>To</label><input id="fTo" type="date"></div><div><label>Sort by</label><select id="fSort"><option value="date-desc">Date (newest first)</option><option value="date-asc">Date (oldest first)</option><option value="driver">Driver A–Z</option><option value="pkgs-desc">Packages (most first)</option><option value="pkgs-asc">Packages (fewest first)</option></select></div><div><label>&nbsp;</label><button class="secondary" id="fReset" type="button">Reset filters</button></div></div><div class="note" id="filterTotals"></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Driver</th><th>Hub</th><th>Packages</th><th>Revenue</th><th>Start Odometer</th><th>End Odometer</th><th>Daily Miles</th><th>Hours</th><th>Pkgs/Hr</th><th>Employee Pay</th><th>Expense</th><th>Net</th><th>Source</th><th class="rowact">Actions</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+<div class="section"><div class="top"><h2>Roster</h2><span class="note">Same driver list as the dropdowns. Removing a name does not delete their routes. Me stays the saved name and is shown as Eric.</span></div><div class="section hiring" id="hiringBanner" style="margin:0 0 12px"><div class="top"><h2 style="margin:0">Hiring</h2><button class="secondary" id="hiringToggle" type="button">Hide note</button></div><div id="hiringNote"></div></div><div class="chips" id="driverChips"></div><div class="rosterlist" id="rosterList"></div><div class="actions"><input id="newDriver" placeholder="Add a driver name" style="max-width:260px"><button class="secondary" id="addDriverBtn" type="button">Add Driver</button></div></div>
 </div>
-<div class="modalbg" id="editModal"><div class="modal"><div class="top"><h2 style="margin:0">Edit Entry</h2><span class="note" id="editInfo"></span></div><div class="form" style="margin-top:12px"><div><label>Date</label><input id="eDate" type="date"></div><div><label>Driver</label><select id="eDriver" class="driverSelect"></select></div><div><label>Packages</label><input id="ePackages" type="number" min="0"></div><div><label>Hours</label><input id="eHours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="eStart" type="number" min="0" step=".1"></div><div><label>Ending Odometer</label><input id="eEnd" type="number" min="0" step=".1"></div><div><label>Daily Miles</label><input id="eMiles" type="number" min="0" step=".1"></div><div><label>Other Expense</label><input id="eExpense" type="number" min="0" step=".01"></div></div><div class="note">If both odometer readings are filled in, daily miles are calculated from them.</div><div class="actions"><button class="primary" id="eSave" type="button">Save Changes</button><button class="secondary" id="eCancel" type="button">Cancel</button></div></div></div>
+<div class="modalbg" id="editModal"><div class="modal"><div class="top"><h2 style="margin:0">Edit Entry</h2><span class="note" id="editInfo"></span></div><div class="form" style="margin-top:12px"><div><label>Date</label><input id="eDate" type="date"></div><div><label>Driver</label><select id="eDriver" class="driverSelect"></select></div><div><label>Hub</label><select id="eHub"><option>Right On Time Repair</option><option>SMG Logistics</option></select></div><div><label>Packages</label><input id="ePackages" type="number" min="0"></div><div><label>Hours</label><input id="eHours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="eStart" type="number" min="0" step=".1"></div><div><label>Ending Odometer</label><input id="eEnd" type="number" min="0" step=".1"></div><div><label>Daily Miles</label><input id="eMiles" type="number" min="0" step=".1"></div><div><label>Other Expense</label><input id="eExpense" type="number" min="0" step=".01"></div></div><div class="note">If both odometer readings are filled in, daily miles are calculated from them.</div><div class="actions"><button class="primary" id="eSave" type="button">Save Changes</button><button class="secondary" id="eCancel" type="button">Cancel</button></div></div></div>
+<div class="modalbg" id="rosterModal"><div class="modal"><div class="top"><h2 style="margin:0" id="rTitle">Driver</h2><span class="note" id="rSavedAs"></span></div><div class="form" style="margin-top:12px"><div><label>Display name</label><input id="rDisplay" maxlength="40"></div><div><label>Phone</label><input id="rPhone" maxlength="40" inputmode="tel" placeholder="Optional"></div><div><label>Email</label><input id="rEmail" maxlength="80" inputmode="email" placeholder="Optional"></div><div><label>Role</label><input id="rRole" maxlength="40"></div><div><label>Status</label><select id="rStatus"><option value="active">Active</option><option value="occasional">Occasional</option><option value="onboarding">Onboarding</option><option value="inactive">Inactive</option></select></div><div><label>Note</label><input id="rNote" maxlength="200"></div></div><div class="note">Usual days</div><div class="checkrow" id="rDays"></div><div class="note">Maybe</div><div class="checkrow" id="rMaybe"></div><div class="note">Hubs</div><div class="checkrow" id="rHubs"></div><div class="actions"><button class="primary" id="rSave" type="button">Save Roster</button><button class="secondary" id="rCancel" type="button">Cancel</button></div></div></div>
 <script src="/history-data.js"></script>
 <script>
 const AMAZON_RATE=2.5,DRIVER_RATE=1.1,WEEKLY_GOAL=350,$=id=>document.getElementById(id),imported=Array.isArray(window.AMAZON_HUB_HISTORY)?window.AMAZON_HUB_HISTORY:[];
@@ -74,27 +77,41 @@ function startOfWeek(d){const x=new Date(d+'T12:00:00'),day=(x.getDay()+6)%7;x.s
 function totals(list){return list.reduce((t,e)=>{const c=calc(e);t.pkgs+=Number(e.packages||0);t.rev+=c.rev;t.pay+=c.pay;t.exp+=Number(e.expense||0);t.net+=c.net;t.hours+=Number(e.hours||0);t.miles+=routeMiles(e);return t},{pkgs:0,rev:0,pay:0,exp:0,net:0,hours:0,miles:0})}
 function persist(){try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));$('saveState').textContent='Saved locally • syncing…';window.pushHubState?.();return true}catch(e){alert('Could not save route data on this device: '+e.message);return false}}
 const DELETED_KEY='amazonHubDeletedIds',DRIVERS_KEY='amazonHubDrivers';
-let hubDrivers=safeParse(localStorage.getItem(DRIVERS_KEY),null)||['Me','Mom','Tisha','AJ','Suzanne'];
+let hubDrivers=safeParse(localStorage.getItem(DRIVERS_KEY),null)||['Me','Valerie','Suzanne','Brianna','Ronna'];
 function deletedIdSet(){return new Set(safeParse(localStorage.getItem(DELETED_KEY),[]).map(String))}
 function applyHubMeta(data){
   if(!data)return;
   if(Array.isArray(data.deleted)){const ids=data.deleted.map(d=>String(d.id));try{localStorage.setItem(DELETED_KEY,JSON.stringify(ids))}catch{}const dead=new Set(ids);entries=entries.filter(e=>!dead.has(String(e.id)))}
-  if(Array.isArray(data.drivers)&&data.drivers.length){hubDrivers=data.drivers.slice();try{localStorage.setItem(DRIVERS_KEY,JSON.stringify(hubDrivers))}catch{}renderDrivers()}
+  if(Array.isArray(data.roster))roster=data.roster.map(r=>({...r}));
+  if(Array.isArray(data.intake))intake=data.intake.map(r=>({...r}));
+  if(Array.isArray(data.requests))deliveryRequests=data.requests.map(r=>({...r}));
+  if(data.hiring&&typeof data.hiring==='object')hiring={open:data.hiring.open!==false,note:data.hiring.note!=null?data.hiring.note:HIRING_NOTE};
+  if(Array.isArray(data.drivers)&&data.drivers.length){hubDrivers=data.drivers.slice();try{localStorage.setItem(DRIVERS_KEY,JSON.stringify(hubDrivers))}catch{}}
+  renderDrivers();
+  if(typeof renderRoster==='function')renderRoster();
 }
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function fillDriverSelect(sel,list,keep){if(!sel)return;const cur=keep??sel.value;const opts=list.slice();if(cur&&!opts.includes(cur))opts.push(cur);sel.innerHTML=opts.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');if(cur)sel.value=cur}
+const HUBS=['Right On Time Repair','SMG Logistics'],DEFAULT_HUB=HUBS[0],WEEKDAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],HIRING_NOTE='Hiring: 1 consistent 5-day driver';
+let roster=[],intake=[],deliveryRequests=[],hiring={open:true,note:HIRING_NOTE},editingRoster=null;
+function entryHub(e){const h=String(e?.hub||'').trim();return HUBS.find(x=>x.toLowerCase()===h.toLowerCase())||DEFAULT_HUB}
+function removedDriver(name){return String(name||'').trim().toLowerCase()==='aj'}
+function driverLabel(name){const row=roster.find(r=>String(r.name).toLowerCase()===String(name||'').toLowerCase());if(row&&row.displayName)return row.displayName;const key=String(name||'').toLowerCase();if(key==='me')return 'Eric';if(key==='valerie')return 'Val';return name||''}
+function weekdayName(date){const d=new Date(String(date)+'T12:00:00');return Number.isNaN(d.getTime())?'':['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]}
+function scopedEntries(){const h=$('fHub')?.value||'';return h?entries.filter(e=>entryHub(e)===h):entries}
+function fillDriverSelect(sel,list,keep){if(!sel)return;const cur=keep??sel.value;const opts=(list||[]).filter(d=>!removedDriver(d));if(cur&&!removedDriver(cur)&&!opts.some(n=>String(n).toLowerCase()===String(cur).toLowerCase()))opts.push(cur);sel.innerHTML=opts.map(d=>`<option value="${esc(d)}">${esc(driverLabel(d))}</option>`).join('');if(cur&&!removedDriver(cur))sel.value=cur}
 function renderDrivers(){
-  const all=hubDrivers.slice();
+  const all=hubDrivers.filter(d=>!removedDriver(d));
   fillDriverSelect($('driver'),all);
-  const fd=$('fDriver');if(fd){const cur=fd.value,names=[...new Set([...all,...entries.map(e=>e.driver).filter(Boolean)])];fd.innerHTML='<option value="">All drivers</option>'+names.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');fd.value=names.includes(cur)?cur:''}
-  const chips=$('driverChips');if(chips)chips.innerHTML=all.map(d=>`<span class="chip">${esc(d)}${d==='Me'?'':`<button type="button" title="Remove from list" data-remove-driver="${esc(d)}">✕</button>`}</span>`).join('');
+  const fd=$('fDriver');if(fd){const cur=fd.value;fd.innerHTML='<option value="">All drivers</option>'+all.map(d=>`<option value="${esc(d)}">${esc(driverLabel(d))}</option>`).join('');fd.value=all.includes(cur)?cur:''}
+  const chips=$('driverChips');if(chips)chips.innerHTML=all.map(d=>`<span class="chip">${esc(driverLabel(d))}${d==='Me'?'':`<button type="button" title="Remove from list" data-remove-driver="${esc(d)}">✕</button>`}</span>`).join('');
 }
 async function saveDrivers(list){
   try{const r=await fetch('/api/hub-drivers',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify({drivers:list})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));applyHubMeta(data)}
   catch(e){alert('Could not save the driver list: '+e.message)}
 }
-function addDriver(){const n=$('newDriver').value.trim();if(!n)return;if(hubDrivers.some(d=>d.toLowerCase()===n.toLowerCase()))return alert(n+' is already in the list.');$('newDriver').value='';saveDrivers([...hubDrivers,n])}
-function removeDriver(n){if(n==='Me')return;if(!confirm(`Remove ${n} from the driver list? Their past entries stay in history.`))return;saveDrivers(hubDrivers.filter(d=>d!==n))}
+function listedDrivers(){const names=[];const push=n=>{if(n&&!removedDriver(n)&&!names.some(x=>x.toLowerCase()===String(n).toLowerCase()))names.push(n)};hubDrivers.forEach(push);roster.forEach(r=>{if(r.status!=='inactive')push(r.name)});if(!names.some(n=>n.toLowerCase()==='me'))names.unshift('Me');return names}
+function addDriver(){const n=$('newDriver').value.trim();if(!n)return;if(removedDriver(n))return alert('AJ was removed and is not added back to the roster.');if(n.toLowerCase()==='eric'&&listedDrivers().some(d=>d.toLowerCase()==='me'))return alert('Eric is already on the roster. Past routes stay saved as Me.');if(listedDrivers().some(d=>d.toLowerCase()===n.toLowerCase()))return alert(n+' is already in the list.');$('newDriver').value='';saveDrivers([...listedDrivers(),n])}
+function removeDriver(n){if(n==='Me')return;if(!confirm(`Remove ${driverLabel(n)} from the driver list? Their past entries stay in history.`))return;saveDrivers(listedDrivers().filter(d=>d!==n))}
 function applyServerEntries(data){applyHubMeta(data);if(Array.isArray(data.entries)){entries=data.entries.map(e=>({...e}));localStorage.setItem(ENTRY_KEY,JSON.stringify(entries))}renderDrivers();render();if(!formDirty&&!loadSavedRoute($('date').value,$('driver').value))clearDailyFields()}
 async function entryRequest(method,id,body){
   const r=await fetch('/api/hub-state/entries/'+encodeURIComponent(id),{method,headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:body?JSON.stringify(body):undefined});
@@ -104,7 +121,7 @@ let editingId=null;
 function openEdit(id){
   const e=entries.find(x=>String(x.id)===String(id));if(!e)return alert('That entry was not found. Refresh and try again.');
   editingId=String(e.id);
-  $('eDate').value=e.date||'';fillDriverSelect($('eDriver'),hubDrivers,e.driver);
+  $('eDate').value=e.date||'';fillDriverSelect($('eDriver'),hubDrivers,e.driver);if($('eHub'))$('eHub').value=entryHub(e);
   $('ePackages').value=e.packages??0;$('eHours').value=e.hours??0;$('eStart').value=e.startMiles??'';$('eEnd').value=e.endMiles??'';$('eMiles').value=routeMiles(e)||'';$('eExpense').value=e.expense??0;
   $('editInfo').textContent=(e.source||'')+(e.editedAt?' • last edited '+new Date(e.editedAt).toLocaleString():'');
   $('editModal').classList.add('open');
@@ -112,7 +129,9 @@ function openEdit(id){
 function closeEdit(){editingId=null;$('editModal').classList.remove('open')}
 async function saveEdit(){
   if(!editingId)return;
+  const current=entries.find(x=>String(x.id)===String(editingId));
   const body={date:$('eDate').value,driver:$('eDriver').value,packages:$('ePackages').value,hours:$('eHours').value,startMiles:$('eStart').value,endMiles:$('eEnd').value,miles:$('eMiles').value,expense:$('eExpense').value};
+  if($('eHub')&&current&&$('eHub').value!==entryHub(current))body.hub=$('eHub').value;
   if(!body.date)return alert('Choose a date.');
   if(!confirm(`Save changes to this entry (${body.driver}, ${body.date}, ${body.packages||0} packages)?`))return;
   try{const data=await entryRequest('PUT',editingId,body);closeEdit();applyServerEntries(data);const s=$('saveState');if(s){s.textContent='Entry updated ✓';setTimeout(()=>{if(s.textContent==='Entry updated ✓')s.textContent=''},2500)}}
@@ -166,8 +185,9 @@ async function pushHubState(){
 }
 window.syncHubState=syncHubState;window.pushHubState=pushHubState;
 
-function draftKey(date,driver){return DAILY_DRAFT_PREFIX+date+'|'+encodeURIComponent(driver||'Me')}
-function draftObj(){return{date:$('date').value,driver:$('driver').value,packages:$('packages').value,stops:document.getElementById('stops')?.value??'',hours:$('hours').value,startMiles:$('startMiles').value,endMiles:$('endMiles').value,expense:$('expense').value}}
+function draftKey(date,driver,hub){return DAILY_DRAFT_PREFIX+date+'|'+encodeURIComponent(driver||'Me')+'|'+encodeURIComponent(hub||DEFAULT_HUB)}
+function readDraft(date,driver,hub){const h=hub||DEFAULT_HUB,fresh=safeParse(localStorage.getItem(draftKey(date,driver,h)),null);if(fresh)return fresh;if(h===DEFAULT_HUB)return safeParse(localStorage.getItem(DAILY_DRAFT_PREFIX+date+'|'+encodeURIComponent(driver||'Me')),null);return null}
+function draftObj(){return{date:$('date').value,driver:$('driver').value,hub:$('routeHub')?.value||DEFAULT_HUB,packages:$('packages').value,stops:document.getElementById('stops')?.value??'',hours:$('hours').value,startMiles:$('startMiles').value,endMiles:$('endMiles').value,expense:$('expense').value}}
 function preview(){const sr=$('startMiles').value,er=$('endMiles').value,s=Number(sr),e=Number(er),m=sr!==''&&er!==''&&Number.isFinite(s)&&Number.isFinite(e)&&s>0&&e>=s?e-s:0;$('miles').value=m?m.toFixed(1):'';$('mileagePreview').textContent=m.toFixed(1)+' mi'}
 function clearDailyFields(){
   ['packages','hours','startMiles','endMiles','expense'].forEach(k=>$(k).value='');
@@ -183,15 +203,16 @@ function saveDraft(){
   const d=draftObj();if(!d.date)return;
   try{
     localStorage.setItem(DRAFT_KEY,JSON.stringify(d));
-    localStorage.setItem(draftKey(d.date,d.driver),JSON.stringify(d));
+    localStorage.setItem(draftKey(d.date,d.driver,d.hub),JSON.stringify(d));
   }catch(e){console.warn('Draft save failed',e.message)}
   formDirty=true;preview();
 }
 window.hubSaveDraft=saveDraft;
-window.hubGetActiveDraft=()=>safeParse(localStorage.getItem(draftKey($('date').value,$('driver').value)),null);
+window.hubGetActiveDraft=()=>readDraft($('date').value,$('driver').value,$('routeHub')?.value||DEFAULT_HUB);
 window.hubHasUnsavedDraft=()=>formDirty;
-function loadSavedRoute(date,driver){
-  const matches=entries.filter(e=>e.date===date&&e.driver===driver);
+function loadSavedRoute(date,driver,hub){
+  const h=hub||$('routeHub')?.value||DEFAULT_HUB;
+  const matches=entries.filter(e=>e.date===date&&e.driver===driver&&entryHub(e)===h);
   if(!matches.length)return false;
   const e=matches[matches.length-1];
   $('packages').value=e.packages??'';
@@ -204,12 +225,13 @@ function loadSavedRoute(date,driver){
 }
 function showSelectedRoute(date,driver){
   activeFormDate=date;activeFormDriver=driver;
-  const d=safeParse(localStorage.getItem(draftKey(date,driver)),null);
+  const hub=$('routeHub')?.value||DEFAULT_HUB;
+  const d=readDraft(date,driver,hub);
   if(d){
     applyDailyDraft(d);
     try{localStorage.setItem(DRAFT_KEY,JSON.stringify(d))}catch{}
   }else{
-    if(!loadSavedRoute(date,driver))clearDailyFields();
+    if(!loadSavedRoute(date,driver,hub))clearDailyFields();
     try{localStorage.removeItem(DRAFT_KEY)}catch{}
   }
   window.dispatchEvent(new Event('hub:route-selection'));
@@ -218,7 +240,7 @@ function loadDraft(){
   // Migrate any older device-only draft to its original day, never into the new day.
   const legacy=safeParse(localStorage.getItem(DRAFT_KEY),null);
   if(legacy?.date&&legacy?.driver){
-    const key=draftKey(legacy.date,legacy.driver);
+    const key=draftKey(legacy.date,legacy.driver,legacy.hub||DEFAULT_HUB);
     try{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(legacy))}catch{}
   }
   const today=localDate();runningDate=today;
@@ -231,14 +253,14 @@ function checkDailyRollover(){
   // Unsaved input remains recoverable by picking its original date and driver.
   if(formDirty&&activeFormDate&&activeFormDriver){
     const d={...draftObj(),date:activeFormDate,driver:activeFormDriver};
-    try{localStorage.setItem(draftKey(activeFormDate,activeFormDriver),JSON.stringify(d))}catch{}
+    try{localStorage.setItem(draftKey(activeFormDate,activeFormDriver,d.hub),JSON.stringify(d))}catch{}
   }
   runningDate=today;$('date').value=today;$('driver').value='Me';
   showSelectedRoute(today,'Me');
   render();syncHubState();
 }
 function addEntry(){
-  const date=$('date').value,driver=$('driver').value;
+  const date=$('date').value,driver=$('driver').value,hub=$('routeHub')?.value||DEFAULT_HUB;
   const pr=$('packages').value.trim(),hr=$('hours').value.trim(),sr=$('startMiles').value.trim(),er=$('endMiles').value.trim(),xr=$('expense').value.trim(),st=document.getElementById('stops')?.value.trim()??'';
   const hasPackages=pr!=='',hasHours=hr!=='',hasStart=sr!=='',hasEnd=er!=='',hasExpense=xr!=='';
   const packages=Number(pr||0),hours=Number(hr||0),start=hasStart?Number(sr):null,end=hasEnd?Number(er):null,expense=Number(xr||0);
@@ -252,12 +274,12 @@ function addEntry(){
   // Use one route record per date + driver so package totals cannot be double-counted by repeated saves.
   for(let i=entries.length-1;i>=0;i--){
     const e=entries[i];
-    if(e.date===date&&e.driver===driver){matchIndex=i;break}
+    if(e.date===date&&e.driver===driver&&entryHub(e)===hub){matchIndex=i;break}
   }
   if(matchIndex<0&&hasEnd&&!hasStart){
-    for(let i=entries.length-1;i>=0;i--){const e=entries[i];if(e.date===date&&e.driver===driver&&e.source==='Manual'&&e.startMiles!=null&&e.endMiles==null){matchIndex=i;break}}
+    for(let i=entries.length-1;i>=0;i--){const e=entries[i];if(e.date===date&&e.driver===driver&&entryHub(e)===hub&&e.source==='Manual'&&e.startMiles!=null&&e.endMiles==null){matchIndex=i;break}}
   }else if(matchIndex<0&&hasStart&&!hasEnd){
-    for(let i=entries.length-1;i>=0;i--){const e=entries[i];if(e.date===date&&e.driver===driver&&e.source==='Manual'&&e.startMiles==null&&e.endMiles!=null){matchIndex=i;break}}
+    for(let i=entries.length-1;i>=0;i--){const e=entries[i];if(e.date===date&&e.driver===driver&&entryHub(e)===hub&&e.source==='Manual'&&e.startMiles==null&&e.endMiles!=null){matchIndex=i;break}}
   }
 
   if(matchIndex>=0){
@@ -268,15 +290,17 @@ function addEntry(){
     if(hasEnd)next.endMiles=end;
     if(hasExpense)next.expense=expense;
     if(next.startMiles!=null&&next.endMiles!=null){if(Number(next.endMiles)<Number(next.startMiles))return alert('Ending odometer must be greater than or equal to starting odometer.');next.miles=Number(next.endMiles)-Number(next.startMiles)}else next.miles=0;
+    if(next.hub||hub!==DEFAULT_HUB)next.hub=hub;
     entries[matchIndex]=next;
     if(!persist()){entries[matchIndex]=old;return}
   }else{
     const miles=hasStart&&hasEnd?end-start:0;
     const e={id:Date.now(),date,driver,packages:hasPackages?packages:0,hours:hasHours?hours:0,startMiles:hasStart?start:null,endMiles:hasEnd?end:null,miles,expense:hasExpense?expense:0,source:'Manual'};
+    if(hub!==DEFAULT_HUB)e.hub=hub;
     entries.push(e);if(!persist()){entries.pop();return}
   }
   // Keep the saved values visible after Save Route so the full daily route can be reviewed and edited.
-  localStorage.removeItem(DRAFT_KEY);localStorage.removeItem(draftKey(date,driver));formDirty=false;$('date').value=date;$('driver').value=driver;
+  localStorage.removeItem(DRAFT_KEY);localStorage.removeItem(draftKey(date,driver,hub));formDirty=false;$('date').value=date;$('driver').value=driver;if($('routeHub'))$('routeHub').value=hub;
   $('packages').value=hasPackages?packages:(entries[matchIndex>=0?matchIndex:entries.length-1]?.packages??'');
   $('hours').value=hasHours?hours:(entries[matchIndex>=0?matchIndex:entries.length-1]?.hours??'');
   $('startMiles').value=hasStart?start:(entries[matchIndex>=0?matchIndex:entries.length-1]?.startMiles??'');
@@ -292,7 +316,7 @@ async function del(id){
 }
 function historyRows(){
   const d=$('fDriver')?.value||'',from=$('fFrom')?.value||'',to=$('fTo')?.value||'',sort=$('fSort')?.value||'date-desc';
-  const list=entries.filter(e=>(!d||e.driver===d)&&(!from||String(e.date)>=from)&&(!to||String(e.date)<=to));
+  const list=scopedEntries().filter(e=>(!d||e.driver===d)&&(!from||String(e.date)>=from)&&(!to||String(e.date)<=to));
   const byDate=(a,b)=>String(a.date).localeCompare(String(b.date));
   const cmp={'date-desc':(a,b)=>byDate(b,a),'date-asc':byDate,'driver':(a,b)=>String(a.driver).localeCompare(String(b.driver))||byDate(b,a),'pkgs-desc':(a,b)=>Number(b.packages||0)-Number(a.packages||0)||byDate(b,a),'pkgs-asc':(a,b)=>Number(a.packages||0)-Number(b.packages||0)||byDate(b,a)}[sort]||((a,b)=>byDate(b,a));
   return list.sort(cmp);
@@ -300,20 +324,158 @@ function historyRows(){
 function restoreHistory(){const manual=entries.filter(e=>!String(e.source||'').startsWith('Imported'));entries=[...imported.map(e=>({...e})),...manual];persist();render()}
 function clearAll(){if(confirm('Delete all saved route data from this browser?')){entries=[];persist();render()}}
 function groupKey(e){return view==='daily'?e.date:view==='weekly'?startOfWeek(e.date):e.date.slice(0,7)}
-function render(){const today=localDate(),week=startOfWeek(today),month=today.slice(0,7),at=totals(entries),tt=totals(entries.filter(e=>e.date===today)),wt=totals(entries.filter(e=>startOfWeek(e.date)===week)),mt=totals(entries.filter(e=>String(e.date||'').slice(0,7)===month)),md=entries.filter(e=>routeMiles(e)>0).length;$('allPkgs').textContent=at.pkgs.toLocaleString();$('allRev').textContent=money(at.rev);$('allHours').textContent=at.hours.toFixed(1);$('avgPph').textContent=(at.hours?at.pkgs/at.hours:0).toFixed(1)+' pkgs/hr';$('allMiles').textContent=at.miles.toFixed(1)+' mi';$('avgMilesDay').textContent=(md?at.miles/md:0).toFixed(1)+' mi/day';$('allNet').textContent=money(at.net);$('allPayLine').textContent='Driver payroll '+money(at.pay);$('historyDays').textContent=entries.filter(e=>Number(e.packages||0)>0||e.startMiles!=null||e.endMiles!=null||routeMiles(e)>0||Number(e.hours||0)>0||Number(e.expense||0)>0).length+' recorded days';$('todayPkgs').textContent=tt.pkgs;$('todayRev').textContent=money(tt.rev);$('todayMiles').textContent=tt.miles.toFixed(1)+' mi';$('weekMiles').textContent=wt.miles.toFixed(1)+' mi';$('monthMiles').textContent=mt.miles.toFixed(1)+' mi';$('weekPkgs').textContent=wt.pkgs;$('weekGoalText').textContent=`${wt.pkgs} / ${WEEKLY_GOAL} (${Math.min(100,Math.round((wt.pkgs/WEEKLY_GOAL)*100))}%)`;$('weekProgress').style.width=Math.min(100,(wt.pkgs/WEEKLY_GOAL)*100)+'%';$('monthRev').textContent=money(mt.rev);$('monthPkgs').textContent=mt.pkgs+' packages';const dates=entries.map(e=>e.date).filter(Boolean).sort();$('historyRange').textContent=dates.length?dates[0]+' → '+dates[dates.length-1]:'No history';const hr=historyRows(),ft=totals(hr);if($('filterTotals'))$('filterTotals').textContent=`Showing ${hr.length} of ${entries.length} entries • ${ft.pkgs.toLocaleString()} packages • revenue ${money(ft.rev)} • driver pay ${money(ft.pay)} • net ${money(ft.net)}`;$('rows').innerHTML=hr.map(e=>{const c=calc(e),m=routeMiles(e);return `<tr><td>${esc(e.date)}</td><td>${esc(e.driver)}</td><td>${e.packages||0}</td><td>${money(c.rev)}</td><td>${e.startMiles??'—'}</td><td>${e.endMiles??'—'}</td><td>${m.toFixed(1)}</td><td>${Number(e.hours||0).toFixed(2)}</td><td>${c.pph.toFixed(1)}</td><td>${money(c.pay)}</td><td>${money(e.expense)}</td><td>${money(c.net)}</td><td>${esc(e.source||'')}${e.editedAt?' <span class="pill">edited</span>':''}</td><td class="rowact"><button class="secondary rowbtn" type="button" onclick="openEdit('${esc(e.id)}')">Edit</button><button class="danger rowbtn" type="button" onclick="del('${esc(e.id)}')">Delete</button></td></tr>`}).join('');const groups={};entries.forEach(e=>{const k=groupKey(e);if(!k)return;if(!groups[k])groups[k]=[];groups[k].push(e)});$('summary').innerHTML=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,24).map(([k,list])=>{const g=totals(list);return `<div class="card"><small>${view==='weekly'?'Week of ':view==='monthly'?'Month ':'Date '}${k}</small><div class="big">${g.pkgs} pkgs</div><div class="muted">Revenue ${money(g.rev)} • ${g.hours.toFixed(1)} hrs</div><div class="gold"><b>${g.miles.toFixed(1)} miles</b></div><div class="green"><b>Net ${money(g.net)}</b></div></div>`}).join('')||'<div class="muted">No route data yet.</div>'}
+function render(){const viewEntries=scopedEntries(),today=localDate(),week=startOfWeek(today),month=today.slice(0,7),at=totals(viewEntries),tt=totals(viewEntries.filter(e=>e.date===today)),wt=totals(viewEntries.filter(e=>startOfWeek(e.date)===week)),mt=totals(viewEntries.filter(e=>String(e.date||'').slice(0,7)===month)),md=viewEntries.filter(e=>routeMiles(e)>0).length;$('allPkgs').textContent=at.pkgs.toLocaleString();$('allRev').textContent=money(at.rev);$('allHours').textContent=at.hours.toFixed(1);$('avgPph').textContent=(at.hours?at.pkgs/at.hours:0).toFixed(1)+' pkgs/hr';$('allMiles').textContent=at.miles.toFixed(1)+' mi';$('avgMilesDay').textContent=(md?at.miles/md:0).toFixed(1)+' mi/day';$('allNet').textContent=money(at.net);$('allPayLine').textContent='Driver payroll '+money(at.pay);$('historyDays').textContent=viewEntries.filter(e=>Number(e.packages||0)>0||e.startMiles!=null||e.endMiles!=null||routeMiles(e)>0||Number(e.hours||0)>0||Number(e.expense||0)>0).length+' recorded days';$('todayPkgs').textContent=tt.pkgs;$('todayRev').textContent=money(tt.rev);$('todayMiles').textContent=tt.miles.toFixed(1)+' mi';$('weekMiles').textContent=wt.miles.toFixed(1)+' mi';$('monthMiles').textContent=mt.miles.toFixed(1)+' mi';$('weekPkgs').textContent=wt.pkgs;$('weekGoalText').textContent=`${wt.pkgs} / ${WEEKLY_GOAL} (${Math.min(100,Math.round((wt.pkgs/WEEKLY_GOAL)*100))}%)`;$('weekProgress').style.width=Math.min(100,(wt.pkgs/WEEKLY_GOAL)*100)+'%';$('monthRev').textContent=money(mt.rev);$('monthPkgs').textContent=mt.pkgs+' packages';const dates=viewEntries.map(e=>e.date).filter(Boolean).sort();$('historyRange').textContent=dates.length?dates[0]+' → '+dates[dates.length-1]:'No history';const hr=historyRows(),ft=totals(hr),hubLabel=$('fHub')?.value||'';if($('filterTotals'))$('filterTotals').textContent=`Showing ${hr.length} of ${viewEntries.length}${hubLabel?' '+hubLabel:''} entries • ${ft.pkgs.toLocaleString()} packages • revenue ${money(ft.rev)} • driver pay ${money(ft.pay)} • net ${money(ft.net)}`;$('rows').innerHTML=hr.map(e=>{const c=calc(e),m=routeMiles(e);return `<tr><td>${esc(e.date)}</td><td>${esc(driverLabel(e.driver))}</td><td>${esc(entryHub(e))}</td><td>${e.packages||0}</td><td>${money(c.rev)}</td><td>${e.startMiles??'—'}</td><td>${e.endMiles??'—'}</td><td>${m.toFixed(1)}</td><td>${Number(e.hours||0).toFixed(2)}</td><td>${c.pph.toFixed(1)}</td><td>${money(c.pay)}</td><td>${money(e.expense)}</td><td>${money(c.net)}</td><td>${esc(e.source||'')}${e.editedAt?' <span class="pill">edited</span>':''}</td><td class="rowact"><button class="secondary rowbtn" type="button" onclick="openEdit('${esc(e.id)}')">Edit</button><button class="danger rowbtn" type="button" onclick="del('${esc(e.id)}')">Delete</button></td></tr>`}).join('');const groups={};viewEntries.forEach(e=>{const k=groupKey(e);if(!k)return;if(!groups[k])groups[k]=[];groups[k].push(e)});$('summary').innerHTML=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,24).map(([k,list])=>{const g=totals(list);return `<div class="card"><small>${view==='weekly'?'Week of ':view==='monthly'?'Month ':'Date '}${k}</small><div class="big">${g.pkgs} pkgs</div><div class="muted">Revenue ${money(g.rev)} • ${g.hours.toFixed(1)} hrs</div><div class="gold"><b>${g.miles.toFixed(1)} miles</b></div><div class="green"><b>Net ${money(g.net)}</b></div></div>`}).join('')||'<div class="muted">No route data yet.</div>';renderRoster();renderIntake();renderQueue()}
 function setView(v){view=v;['daily','weekly','monthly'].forEach(x=>$(x+'Btn').classList.toggle('tabactive',x===v));render()}
 async function refreshEta(){try{const r=await fetch('/api/eta',{cache:'no-store'}),d=await r.json(),e=d.latest;if(!e)return;$('etaDriver').textContent=e.driver||'Driver';$('etaPackages').textContent=e.packages??'—';$('etaTime').textContent=e.eta||'—';$('etaStatus').textContent=e.status||'Update received';$('etaMessage').textContent=e.body||'';$('etaReceived').textContent=e.receivedAt?new Date(e.receivedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'—'}catch{}}
-function exportCSV(){const head=['Date','Driver','Packages','Revenue','Start Odometer','End Odometer','Daily Miles','Hours','Packages per Hour','Employee Pay','Other Expense','Net','Source'],lines=[head.join(',')];entries.forEach(e=>{const c=calc(e);lines.push([e.date,e.driver,e.packages||0,c.rev.toFixed(2),e.startMiles??'',e.endMiles??'',routeMiles(e).toFixed(1),Number(e.hours||0).toFixed(2),c.pph.toFixed(2),c.pay.toFixed(2),Number(e.expense||0).toFixed(2),c.net.toFixed(2),e.source||''].join(','))});download('amazon-hub-routes.csv',lines.join('\n'),'text/csv')}
+function exportCSV(){const head=['Date','Driver','Packages','Revenue','Start Odometer','End Odometer','Daily Miles','Hours','Packages per Hour','Employee Pay','Other Expense','Net','Source','Hub'],lines=[head.join(',')];entries.forEach(e=>{const c=calc(e);lines.push([e.date,csvCell(e.driver),e.packages||0,c.rev.toFixed(2),e.startMiles??'',e.endMiles??'',routeMiles(e).toFixed(1),Number(e.hours||0).toFixed(2),c.pph.toFixed(2),c.pay.toFixed(2),Number(e.expense||0).toFixed(2),c.net.toFixed(2),csvCell(e.source||''),csvCell(e.hub||'')].join(','))});download('amazon-hub-routes.csv',lines.join('\n'),'text/csv')}
+function csvCell(v){const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
 function downloadBackup(){download('amazon-hub-backup.json',JSON.stringify(entries,null,2),'application/json')}
 function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function availText(r){const days=(r.availability||[]).map(d=>(r.maybeDays||[]).includes(d)?'maybe '+d:d);return days.length?days.join(', '):'No set days'}
+function renderRoster(){
+  const note=$('hiringNote'),banner=$('hiringBanner');
+  if(note){note.textContent=hiring.note||HIRING_NOTE;note.style.display=hiring.open?'':'none'}
+  if(banner)banner.style.display='';
+  const toggle=$('hiringToggle');if(toggle)toggle.textContent=hiring.open?'Hide note':'Show hiring note';
+  const box=$('rosterList');if(!box)return;
+  const rows=roster.length?roster:[];
+  box.innerHTML=rows.map(r=>`<div class="person"><div class="top"><b>${esc(r.displayName||driverLabel(r.name))}</b><span class="pill">${esc(r.status||'active')}</span></div>${r.name!==(r.displayName||r.name)?`<div class="note">Saved on routes as ${esc(r.name)}</div>`:`<div class="note">${esc(r.name)}</div>`}<div class="note">${esc(r.role||'Driver')} · ${esc((r.hubs||[]).join(', ')||DEFAULT_HUB)}</div><div class="note">${esc(availText(r))}</div><div class="note">${r.phone?esc(r.phone):'No phone'} · ${r.email?esc(r.email):'No email'}</div>${r.note?`<div class="note">${esc(r.note)}</div>`:''}<div class="actions"><button class="secondary rowbtn" type="button" data-edit-roster="${esc(r.name)}">Edit</button></div></div>`).join('')||'<div class="note">Roster loads with the hub data.</div>';
+}
+function peopleFor(date,hub){
+  const day=weekdayName(date);
+  const rows=roster.filter(r=>r.status!=='inactive'&&(r.hubs||[]).includes(hub));
+  const usual=[],maybe=[],occasional=[];
+  for(const r of rows){
+    if((r.maybeDays||[]).includes(day))maybe.push(r);
+    else if((r.availability||[]).includes(day))usual.push(r);
+    else if(r.status==='occasional')occasional.push(r);
+  }
+  return {day,usual,maybe,occasional};
+}
+function assignedFor(date,hub){
+  const delivered=entries.filter(e=>e.date===date&&entryHub(e)===hub);
+  const taken=new Set(delivered.map(e=>String(e.driver).toLowerCase()));
+  const approved=deliveryRequests.filter(r=>r.status==='approved'&&r.date===date&&r.hub===hub&&!taken.has(String(r.driver).toLowerCase()));
+  const parts=[];
+  for(const e of delivered)parts.push(`${driverLabel(e.driver)} ${Number(e.packages||0)} delivered`);
+  for(const r of approved)parts.push(`${driverLabel(r.driver)} ${Number(r.approvedPackages??r.packages)||0} approved`);
+  const sum=delivered.reduce((s,e)=>s+Number(e.packages||0),0)+approved.reduce((s,r)=>s+Number(r.approvedPackages??r.packages)||0,0);
+  return {sum,detail:parts.join(' · ')||'Nobody assigned yet'};
+}
+function renderIntake(){
+  if(!$('inDate'))return;
+  if(!$('inDate').value)$('inDate').value=localDate();
+  const date=$('inDate').value,hub=$('inHub')?.value||DEFAULT_HUB;
+  const row=intake.find(r=>r.date===date&&r.hub===hub);
+  const received=row?Number(row.packages)||0:0,a=assignedFor(date,hub),people=peopleFor(date,hub);
+  $('inReceived').textContent=received.toLocaleString();
+  $('inAssigned').textContent=a.sum.toLocaleString();
+  $('inAssignedDetail').textContent=a.detail;
+  const remaining=received-a.sum;
+  $('inRemaining').textContent=remaining.toLocaleString();
+  $('inRemaining').style.color=remaining<0?'#fca5a5':'';
+  const bits=[];
+  if(people.usual.length)bits.push('Usual: '+people.usual.map(r=>driverLabel(r.name)).join(', '));
+  if(people.maybe.length)bits.push('Maybe: '+people.maybe.map(r=>driverLabel(r.name)).join(', '));
+  if(people.occasional.length)bits.push('Occasional: '+people.occasional.map(r=>driverLabel(r.name)).join(', '));
+  $('inDay').textContent=people.day?people.day+' availability':'Available';
+  $('inPeople').textContent=bits.join(' · ')||'No one has this weekday marked.';
+}
+function renderQueue(){
+  const box=$('requestQueue');if(!box)return;
+  if(!deliveryRequests.length){box.innerHTML='<div class="note">No delivery requests yet.</div>';return}
+  const order=deliveryRequests.slice().sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1)||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  box.innerHTML=order.map(r=>{const count=r.status==='approved'?(r.approvedPackages??r.packages):r.packages;return `<div class="qitem"><b>${esc(driverLabel(r.driver))}</b> · ${esc(r.hub)} · ${esc(r.date)} · ${Number(count)||0} packages <span class="pill">${esc(r.status)}</span>${r.note?`<div class="note">${esc(r.note)}</div>`:''}${r.status==='pending'?`<div class="actions"><input type="number" min="0" step="1" value="${Number(r.packages)||0}" data-approve-count="${esc(r.id)}" aria-label="Packages to approve"><button class="primary rowbtn" type="button" data-approve="${esc(r.id)}">Approve</button><button class="danger rowbtn" type="button" data-decline="${esc(r.id)}">Decline</button></div>`:''}</div>`}).join('');
+}
+function fillIntakeInput(){
+  if(!$('inDate')||!$('inDate').value)$('inDate').value=localDate();
+  const row=intake.find(r=>r.date===$('inDate').value&&r.hub===$('inHub').value);
+  $('inPackages').value=row?row.packages:'';
+  renderIntake();
+}
+async function postJSON(url,body){
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify(body)});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));
+  return data;
+}
+async function saveIntake(){
+  const packages=$('inPackages').value===''?0:Number($('inPackages').value);
+  if(!$('inDate').value)return alert('Choose a date.');
+  if(!Number.isFinite(packages)||packages<0)return alert('Enter the total packages received.');
+  try{const data=await postJSON('/api/hub-intake',{date:$('inDate').value,hub:$('inHub').value,packages});applyHubMeta(data);render()}
+  catch(e){alert('Could not save the package count: '+e.message)}
+}
+function buildRosterChecks(){
+  const dayBox=$('rDays'),maybeBox=$('rMaybe'),hubBox=$('rHubs');
+  if(!dayBox||dayBox.childElementCount)return;
+  dayBox.innerHTML=WEEKDAYS.map(d=>`<label><input type="checkbox" data-day value="${d}"> ${d}</label>`).join('');
+  maybeBox.innerHTML=WEEKDAYS.map(d=>`<label><input type="checkbox" data-maybe value="${d}"> ${d}</label>`).join('');
+  hubBox.innerHTML=HUBS.map(h=>`<label><input type="checkbox" data-hub value="${esc(h)}"> ${esc(h)}</label>`).join('');
+}
+function openRoster(name){
+  const r=roster.find(x=>x.name===name);if(!r)return;
+  buildRosterChecks();editingRoster=r.name;
+  $('rTitle').textContent=r.displayName||driverLabel(r.name);
+  $('rSavedAs').textContent=r.name==='Me'?'Saved on routes as Me':'Saved name: '+r.name;
+  $('rDisplay').value=r.displayName||'';$('rPhone').value=r.phone||'';$('rEmail').value=r.email||'';$('rRole').value=r.role||'';$('rStatus').value=r.status||'active';$('rNote').value=r.note||'';
+  $('rStatus').disabled=r.name==='Me';
+  document.querySelectorAll('[data-day]').forEach(el=>{el.checked=(r.availability||[]).includes(el.value)});
+  document.querySelectorAll('[data-maybe]').forEach(el=>{el.checked=(r.maybeDays||[]).includes(el.value)});
+  document.querySelectorAll('[data-hub]').forEach(el=>{el.checked=(r.hubs||[]).includes(el.value)});
+  $('rosterModal').classList.add('open');
+}
+function closeRoster(){editingRoster=null;$('rosterModal')?.classList.remove('open')}
+async function postRoster(list,hire){
+  const data=await postJSON('/api/hub-roster',{roster:list,hiring:hire||hiring});
+  applyHubMeta(data);closeRoster();render();
+}
+async function saveRosterEdit(){
+  if(!editingRoster)return;
+  const availability=[...document.querySelectorAll('[data-day]:checked')].map(el=>el.value);
+  document.querySelectorAll('[data-maybe]').forEach(el=>{if(el.checked&&!availability.includes(el.value))availability.push(el.value)});
+  const maybeDays=[...document.querySelectorAll('[data-maybe]:checked')].map(el=>el.value).filter(d=>availability.includes(d));
+  const hubs=[...document.querySelectorAll('[data-hub]:checked')].map(el=>el.value);
+  const name=editingRoster;
+  const next=roster.map(r=>r.name===name?{...r,displayName:$('rDisplay').value.trim()||(name==='Me'?'Eric':name),phone:$('rPhone').value.trim(),email:$('rEmail').value.trim(),role:$('rRole').value.trim()||(name==='Me'?'Owner':'Driver'),status:name==='Me'?'active':$('rStatus').value,note:$('rNote').value.trim(),availability,maybeDays,hubs:hubs.length?hubs:[DEFAULT_HUB]}:r);
+  try{await postRoster(next,hiring)}catch(e){alert('Could not save the roster: '+e.message)}
+}
+async function toggleHiring(){
+  if(!roster.length)return alert('The roster is still loading. Try again in a moment.');
+  const next={open:!hiring.open,note:hiring.note||HIRING_NOTE};
+  try{await postRoster(roster,next)}catch(e){alert('Could not update the hiring note: '+e.message)}
+}
+async function decideRequest(id,action){
+  const row=deliveryRequests.find(r=>String(r.id)===String(id));if(!row)return;
+  let packages=row.packages;
+  if(action==='approve'){
+    const input=document.querySelector(`[data-approve-count="${CSS.escape(String(id))}"]`);
+    packages=Number(input?.value??row.packages);
+    if(!Number.isFinite(packages)||packages<0)return alert('Enter how many packages to assign.');
+    if(!confirm(`Approve ${packages} packages for ${driverLabel(row.driver)} on ${row.date} at ${row.hub}?`))return;
+  }else if(!confirm(`Decline the request from ${driverLabel(row.driver)} (${row.date}, ${row.packages} packages)?`))return;
+  try{const data=await postJSON('/api/hub-requests/'+encodeURIComponent(id),{action,packages});applyHubMeta(data);render()}
+  catch(e){alert('Could not update the request: '+e.message)}
+}
 ['packages','hours','startMiles','endMiles','expense'].forEach(id=>$(id).addEventListener('input',saveDraft));
 $('date').addEventListener('change',switchRouteSelection);
 $('driver').addEventListener('change',switchRouteSelection);
+$('routeHub')?.addEventListener('change',switchRouteSelection);
 $('saveBtn').addEventListener('click',addEntry);$('csvBtn').addEventListener('click',exportCSV);$('backupBtn').addEventListener('click',downloadBackup);$('restoreBtn').addEventListener('click',restoreHistory);$('clearBtn').addEventListener('click',clearAll);$('dailyBtn').addEventListener('click',()=>setView('daily'));$('weeklyBtn').addEventListener('click',()=>setView('weekly'));$('monthlyBtn').addEventListener('click',()=>setView('monthly'));
-['fDriver','fFrom','fTo','fSort'].forEach(id=>$(id).addEventListener('change',render));
-$('fReset').addEventListener('click',()=>{$('fDriver').value='';$('fFrom').value='';$('fTo').value='';$('fSort').value='date-desc';render()});
+['fDriver','fHub','fFrom','fTo','fSort'].forEach(id=>$(id)?.addEventListener('change',render));
+$('fReset').addEventListener('click',()=>{$('fDriver').value='';$('fHub').value='';$('fFrom').value='';$('fTo').value='';$('fSort').value='date-desc';render()});
 $('eSave').addEventListener('click',saveEdit);$('eCancel').addEventListener('click',closeEdit);$('editModal').addEventListener('click',ev=>{if(ev.target.id==='editModal')closeEdit()});
 $('addDriverBtn').addEventListener('click',addDriver);$('driverChips').addEventListener('click',ev=>{const b=ev.target.closest('[data-remove-driver]');if(b)removeDriver(b.getAttribute('data-remove-driver'))});$('newDriver').addEventListener('keydown',ev=>{if(ev.key==='Enter')addDriver()});
+$('inSave')?.addEventListener('click',saveIntake);
+$('inDate')?.addEventListener('change',fillIntakeInput);
+$('inHub')?.addEventListener('change',fillIntakeInput);
+$('hiringToggle')?.addEventListener('click',toggleHiring);
+$('rosterList')?.addEventListener('click',ev=>{const b=ev.target.closest('[data-edit-roster]');if(b)openRoster(b.getAttribute('data-edit-roster'))});
+$('rSave')?.addEventListener('click',saveRosterEdit);
+$('rCancel')?.addEventListener('click',closeRoster);
+$('rosterModal')?.addEventListener('click',ev=>{if(ev.target.id==='rosterModal')closeRoster()});
+$('requestQueue')?.addEventListener('click',ev=>{const ok=ev.target.closest('[data-approve]');const no=ev.target.closest('[data-decline]');if(ok)decideRequest(ok.getAttribute('data-approve'),'approve');else if(no)decideRequest(no.getAttribute('data-decline'),'decline')});
+buildRosterChecks();
 renderDrivers();
 loadDraft();render();syncHubState();refreshEta();
 setInterval(refreshEta,15000);setInterval(syncHubState,10000);
