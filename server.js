@@ -27,7 +27,7 @@ const requiredRouteEntries=[
   {id:100139,date:'2026-09-16',driver:'Me',packages:48,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
   {id:100140,date:'2026-09-17',driver:'Me',packages:37,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'}
 ];
-const DEFAULT_DRIVERS=['Me','Mom','Tisha','Suzanne','Jamie'];
+const DEFAULT_DRIVERS=['Me','Valerie','Suzanne','Brianna','Ronna'];
 const HUB_LIST=[{id:'rotrepair',name:'Right On Time Repair'},{id:'smg',name:'SMG Logistics'}];
 const DEFAULT_HUB='Right On Time Repair';
 const WEEKDAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -35,12 +35,10 @@ const ROSTER_STATUSES=['active','occasional','onboarding','inactive'];
 const HIRING_NOTE='Hiring: 1 consistent 5-day driver';
 const ROSTER_SEED=[
   {name:'Me',displayName:'Eric',phone:'',email:'',role:'Owner',availability:WEEKDAYS.slice(),maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:'Main hub owner. Past routes stay saved as Me.'},
-  {name:'Mom',displayName:'Mom',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
-  {name:'Tisha',displayName:'Tisha',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
+  {name:'Valerie',displayName:'Val',phone:'',email:'',role:'Point of contact',availability:[],maybeDays:[],status:'onboarding',hubs:['SMG Logistics'],note:'Rarely drives. Point of contact for SMG Logistics.'},
   {name:'Suzanne',displayName:'Suzanne',phone:'',email:'',role:'Driver',availability:['Mon','Wed','Thu'],maybeDays:['Thu'],status:'active',hubs:[DEFAULT_HUB],note:'Thursday is maybe.'},
-  {name:'Jamie',displayName:'Jamie Leann Upton',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'onboarding',hubs:[DEFAULT_HUB],note:'Passed Amazon Hub training; next scheduled driver to start'},
-  {name:'Valerie',displayName:'Valerie',phone:'',email:'',role:'Point of contact',availability:[],maybeDays:[],status:'onboarding',hubs:['SMG Logistics'],note:'Rarely drives. Point of contact for SMG Logistics.'},
-  {name:'Roxanne',displayName:'Roxanne',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'occasional',hubs:[DEFAULT_HUB],note:''}
+  {name:'Brianna',displayName:'Brianna',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
+  {name:'Ronna',displayName:'Ronna',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''}
 ];
 function normDeleted(list){return Array.isArray(list)?list.filter(d=>d&&d.id!=null).map(d=>({...d,id:String(d.id)})):[]}
 function removedDriver(name){return String(name||'').trim().toLowerCase()==='aj'}
@@ -92,12 +90,7 @@ function driversFromRoster(roster){
 }
 function buildRoster(state){
   const rosterMissing=!Array.isArray(state.roster);
-  let drivers=normDrivers(Array.isArray(state.drivers)?state.drivers:DEFAULT_DRIVERS);
-  if(rosterMissing){
-    for(const name of ['Valerie','Roxanne']){
-      if(!drivers.some(d=>d.toLowerCase()===name.toLowerCase()))drivers.push(name);
-    }
-  }
+  const drivers=normDrivers(Array.isArray(state.drivers)?state.drivers:DEFAULT_DRIVERS);
   const byName=new Map();
   if(!rosterMissing){
     for(const raw of state.roster){
