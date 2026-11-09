@@ -27,7 +27,7 @@ const requiredRouteEntries=[
   {id:100139,date:'2026-09-16',driver:'Me',packages:48,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
   {id:100140,date:'2026-09-17',driver:'Me',packages:37,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'}
 ];
-const DEFAULT_DRIVERS=['Me','Mom','Tisha','AJ','Suzanne'];
+const DEFAULT_DRIVERS=['Me','Mom','Tisha','Suzanne','Jamie'];
 const HUB_LIST=[{id:'rotrepair',name:'Right On Time Repair'},{id:'smg',name:'SMG Logistics'}];
 const DEFAULT_HUB='Right On Time Repair';
 const WEEKDAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -37,14 +37,15 @@ const ROSTER_SEED=[
   {name:'Me',displayName:'Eric',phone:'',email:'',role:'Owner',availability:WEEKDAYS.slice(),maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:'Main hub owner. Past routes stay saved as Me.'},
   {name:'Mom',displayName:'Mom',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
   {name:'Tisha',displayName:'Tisha',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
-  {name:'AJ',displayName:'AJ',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
   {name:'Suzanne',displayName:'Suzanne',phone:'',email:'',role:'Driver',availability:['Mon','Wed','Thu'],maybeDays:['Thu'],status:'active',hubs:[DEFAULT_HUB],note:'Thursday is maybe.'},
+  {name:'Jamie',displayName:'Jamie Leann Upton',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'onboarding',hubs:[DEFAULT_HUB],note:'Passed Amazon Hub training; next scheduled driver to start'},
   {name:'Valerie',displayName:'Valerie',phone:'',email:'',role:'Point of contact',availability:[],maybeDays:[],status:'onboarding',hubs:['SMG Logistics'],note:'Rarely drives. Point of contact for SMG Logistics.'},
   {name:'Roxanne',displayName:'Roxanne',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'occasional',hubs:[DEFAULT_HUB],note:''}
 ];
 function normDeleted(list){return Array.isArray(list)?list.filter(d=>d&&d.id!=null).map(d=>({...d,id:String(d.id)})):[]}
+function removedDriver(name){return String(name||'').trim().toLowerCase()==='aj'}
 function normDrivers(list){
-  const out=[];for(const d of Array.isArray(list)?list:[]){const n=String(d||'').trim().slice(0,40);if(n&&!out.some(x=>x.toLowerCase()===n.toLowerCase()))out.push(n)}
+  const out=[];for(const d of Array.isArray(list)?list:[]){const n=String(d||'').trim().slice(0,40);if(!n||removedDriver(n)||out.some(x=>x.toLowerCase()===n.toLowerCase()))continue;out.push(n)}
   if(!out.includes('Me'))out.unshift('Me');
   return out;
 }
@@ -65,7 +66,7 @@ function normDays(list){
 }
 function normRosterRow(raw){
   const name=String(raw?.name||'').trim().slice(0,40);
-  if(!name)return null;
+  if(!name||removedDriver(name))return null;
   const seed=ROSTER_SEED.find(r=>r.name.toLowerCase()===name.toLowerCase());
   const src=raw&&typeof raw==='object'?raw:{};
   const storedName=seed?.name==='Me'||name.toLowerCase()==='me'?'Me':name;
