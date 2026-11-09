@@ -27,10 +27,20 @@ const requiredRouteEntries=[
   {id:100139,date:'2026-09-16',driver:'Me',packages:48,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
   {id:100140,date:'2026-09-17',driver:'Me',packages:37,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'}
 ];
+const DEFAULT_DRIVERS=['Me','Mom','Tisha','AJ','Suzanne'];
+function normDeleted(list){return Array.isArray(list)?list.filter(d=>d&&d.id!=null).map(d=>({...d,id:String(d.id)})):[]}
+function normDrivers(list){
+  const out=[];for(const d of Array.isArray(list)?list:[]){const n=String(d||'').trim().slice(0,40);if(n&&!out.some(x=>x.toLowerCase()===n.toLowerCase()))out.push(n)}
+  if(!out.includes('Me'))out.unshift('Me');
+  return out;
+}
 function ensureRequiredEntries(state){
-  const out={...state,entries:Array.isArray(state.entries)?state.entries.map(e=>({...e})):[],stops:Array.isArray(state.stops)?state.stops:[]};
+  const deleted=normDeleted(state.deleted);
+  const deadIds=new Set(deleted.map(d=>d.id)),deadKeys=new Set(deleted.map(d=>d.date+'|'+d.driver));
+  const out={...state,entries:Array.isArray(state.entries)?state.entries.filter(e=>!deadIds.has(String(e?.id))).map(e=>({...e})):[],stops:Array.isArray(state.stops)?state.stops:[],deleted,drivers:normDrivers(Array.isArray(state.drivers)?state.drivers:DEFAULT_DRIVERS)};
   const keys=new Set(out.entries.map(e=>e?.date+'|'+e?.driver));
-  for(const e of requiredRouteEntries){const k=e.date+'|'+e.driver;if(!keys.has(k)){out.entries.push({...e});keys.add(k)}}
+  const liveIds=new Set(out.entries.filter(e=>e?.id!=null).map(e=>String(e.id)));
+  for(const e of requiredRouteEntries){const k=e.date+'|'+e.driver;if(deadIds.has(String(e.id))||deadKeys.has(k)||liveIds.has(String(e.id)))continue;if(!keys.has(k)){out.entries.push({...e});keys.add(k)}}
   return out;
 }
 function readHubState(){try{return ensureRequiredEntries(JSON.parse(fs.readFileSync(hubStateFile,'utf8')))}catch{return ensureRequiredEntries({entries:[],stops:[],updatedAt:null,revision:0})}}
@@ -39,24 +49,31 @@ const packageCorrections={'2026-09-19':44,'2026-09-29':40,'2026-10-05':37};
 const clearedStopDates=new Set(['2026-10-05']);
 function hasValue(v){return v!==null&&v!==undefined&&v!==''}
 function mergeHubState(current,incoming){
-  const map=new Map();
-  for(const e of current.entries||[])if(e?.date&&e?.driver)map.set(e.date+'|'+e.driver,{...e});
+  const map=new Map(),byId=new Map();
+  // Deleted entries are remembered by id so an old browser cache can never bring them back.
+  const deadIds=new Set(normDeleted(current.deleted).map(d=>d.id));
+  for(const e of current.entries||[])if(e?.date&&e?.driver){map.set(e.date+'|'+e.driver,{...e});if(e.id!=null)byId.set(String(e.id),{...e})}
   for(const e of incoming.entries||[]){
     if(!e?.date||!e?.driver)continue;
+    if(e.id!=null&&deadIds.has(String(e.id)))continue;
+    // An entry edited from the history table only accepts writes from clients that have seen that edit.
+    const known=e.id!=null?byId.get(String(e.id)):null;
+    if(known&&known.editedAt&&e.editedAt!==known.editedAt)continue;
+    if(known&&(known.date!==e.date||known.driver!==e.driver))continue;
     const key=e.date+'|'+e.driver,old=map.get(key)||{},next={...old};
     for(const f of ['id','date','driver','packages','hours','startMiles','endMiles','miles','expense','source']){
       if(hasValue(e[f]))next[f]=e[f];
     }
-    if(packageCorrections[e.date]!=null&&e.driver==='Me')next.packages=packageCorrections[e.date];
+    if(packageCorrections[e.date]!=null&&e.driver==='Me'&&!next.editedAt)next.packages=packageCorrections[e.date];
     if(next.startMiles!=null&&next.endMiles!=null&&Number(next.endMiles)>=Number(next.startMiles))next.miles=Number(next.endMiles)-Number(next.startMiles);
     next.updatedAt=new Date().toISOString(); map.set(key,next);
   }
-  for(const [key,e] of map){if(packageCorrections[e.date]!=null&&e.driver==='Me')e.packages=packageCorrections[e.date];}
+  for(const [key,e] of map){if(packageCorrections[e.date]!=null&&e.driver==='Me'&&!e.editedAt)e.packages=packageCorrections[e.date];}
   const stopMap=new Map();
   for(const r of current.stops||[])if(r?.date)stopMap.set(r.date,{...r});
   for(const r of incoming.stops||[])if(r?.date&&!clearedStopDates.has(r.date))stopMap.set(r.date,{...stopMap.get(r.date),...r,updatedAt:new Date().toISOString()});
   for(const d of clearedStopDates)stopMap.delete(d);
-  return {entries:[...map.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),stops:[...stopMap.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),updatedAt:new Date().toISOString(),revision:Number(current.revision||0)+1};
+  return {entries:[...map.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),stops:[...stopMap.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),deleted:normDeleted(current.deleted),drivers:normDrivers(current.drivers),updatedAt:new Date().toISOString(),revision:Number(current.revision||0)+1};
 }
 function parseMessage(body=''){
   const pkg=body.match(/(\d+)\s*(?:packages?|pkgs?)/i);
@@ -134,6 +151,52 @@ const server=http.createServer(async(req,res)=>{
       if(!writeHubState(merged))return json(res,{ok:false,error:'save failed'},500);
       return json(res,{ok:true,...merged});
     }catch(e){console.error('Hub sync error',e.message);return json(res,{ok:false,error:e.message},400)}
+  }
+  const entryMatch=reqPath.match(/^\/api\/hub-state\/entries\/([^/]+)$/);
+  if(entryMatch&&(req.method==='DELETE'||req.method==='PUT')){
+    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
+    try{
+      const id=decodeURIComponent(entryMatch[1]),current=readHubState(),idx=current.entries.findIndex(e=>String(e.id)===id);
+      if(idx<0)return json(res,{ok:false,error:'entry not found'},404);
+      const now=new Date().toISOString(),old=current.entries[idx];
+      if(req.method==='DELETE'){
+        current.entries.splice(idx,1);
+        current.deleted=[...normDeleted(current.deleted).filter(d=>d.id!==id),{id,date:old.date,driver:old.driver,packages:old.packages,deletedAt:now,entry:old}];
+      }else{
+        const body=JSON.parse(await collect(req)||'{}'),next={...old};
+        if(body.date!=null){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(body.date)))return json(res,{ok:false,error:'invalid date'},400);next.date=String(body.date)}
+        if(body.driver!=null){const d=String(body.driver).trim().slice(0,40);if(!d)return json(res,{ok:false,error:'driver required'},400);next.driver=d}
+        for(const f of ['packages','hours','miles','expense','startMiles','endMiles']){
+          if(!(f in body))continue;const v=body[f];
+          if(v===null||v===''){next[f]=(f==='startMiles'||f==='endMiles')?null:0;continue}
+          const n=Number(v);if(!Number.isFinite(n)||n<0)return json(res,{ok:false,error:'invalid '+f},400);next[f]=n;
+        }
+        if(next.startMiles!=null&&next.endMiles!=null){if(Number(next.endMiles)<Number(next.startMiles))return json(res,{ok:false,error:'ending odometer is below starting odometer'},400);next.miles=Number(next.endMiles)-Number(next.startMiles)}
+        if(current.entries.some((e,i)=>i!==idx&&e.date===next.date&&e.driver===next.driver))return json(res,{ok:false,error:`There is already an entry for ${next.driver} on ${next.date}. Edit or delete that one instead.`},409);
+        next.editedAt=now;next.updatedAt=now;current.entries[idx]=next;
+        current.entries.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+        if(!current.drivers.some(d=>d.toLowerCase()===next.driver.toLowerCase()))current.drivers.push(next.driver);
+        if(old.date!==next.date||old.driver!==next.driver){
+          const seed=requiredRouteEntries.find(e=>e.date===old.date&&e.driver===old.driver);
+          // A moved seeded row must not leave its old slot empty for the hardcoded copy to refill.
+          // The tombstone id is not the living entry id, so the moved row stays visible.
+          if(seed){const tombId='seed:'+seed.id;current.deleted=[...normDeleted(current.deleted).filter(d=>d.id!==tombId),{id:tombId,date:old.date,driver:old.driver,deletedAt:now}];}
+        }
+      }
+      current.updatedAt=now;current.revision=Number(current.revision||0)+1;
+      if(!writeHubState(current))return json(res,{ok:false,error:'save failed'},500);
+      return json(res,{ok:true,...readHubState()});
+    }catch(e){console.error('Hub entry error',e.message);return json(res,{ok:false,error:e.message},400)}
+  }
+  if(reqPath==='/api/hub-drivers'&&req.method==='POST'){
+    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
+    try{
+      const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
+      if(!Array.isArray(body.drivers))return json(res,{ok:false,error:'drivers list required'},400);
+      current.drivers=normDrivers(body.drivers);current.updatedAt=new Date().toISOString();current.revision=Number(current.revision||0)+1;
+      if(!writeHubState(current))return json(res,{ok:false,error:'save failed'},500);
+      return json(res,{ok:true,...readHubState()});
+    }catch(e){return json(res,{ok:false,error:e.message},400)}
   }
   if(reqPath==='/api/eta'&&req.method==='GET')return json(res,readEta());
   if(reqPath==='/api/today-route'&&req.method==='GET')return json(res,readEta().todayRoute||readEta().latest||{});
