@@ -10,6 +10,8 @@
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}.card,.section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.section{margin:14px 0}.big{font-size:27px;font-weight:800;margin-top:5px}.green{color:#86efac}.blue{color:#7dd3fc}.gold{color:#fcd34d}
 .form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.form label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}input,select,button{width:100%;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#fff;padding:10px}button{cursor:pointer;font-weight:700}.primary{background:var(--blue)}.secondary{background:#1e293b}.danger{background:#7f1d1d}
 .actions,.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button,.tabs button{width:auto}.tabactive{background:#0369a1}.tablewrap{overflow:auto;max-height:620px}table{width:100%;border-collapse:collapse;min-width:1250px}th,td{padding:9px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}th{background:#0b1220;position:sticky;top:0}.summarygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.pill{padding:5px 9px;border-radius:999px;background:#1e293b;color:#cbd5e1;font-size:12px}.progress{height:10px;background:#0b1220;border:1px solid #334155;border-radius:999px;overflow:hidden;margin-top:8px}.progress div{height:100%;background:var(--green)}.calcbox{padding:12px;border:1px solid #334155;border-radius:12px;margin-top:10px}.note{font-size:12px;margin-top:5px}.eta{border-color:var(--blue)}.status{display:inline-block;padding:4px 8px;border-radius:999px;background:#082f49;color:#7dd3fc;font-size:12px}.saved{display:inline-block;margin-left:8px;color:#86efac;font-size:13px;font-weight:700}
+.filters{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:10px 0}.filters label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}.rowbtn{width:auto;padding:5px 9px;font-size:12px;margin-right:4px}td.rowact,th.rowact{position:sticky;right:0;background:#111827;white-space:nowrap}th.rowact{background:#0b1220}.modalbg{position:fixed;inset:0;background:rgba(2,6,23,.75);display:none;align-items:center;justify-content:center;z-index:50;padding:12px}.modalbg.open{display:flex}.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:640px;width:100%}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.chip{display:inline-flex;gap:6px;align-items:center;padding:5px 10px;border-radius:999px;background:#1e293b;font-size:13px}.chip button{width:auto;padding:0 6px;border:0;background:none;color:#fca5a5}
+@media(max-width:900px){.filters{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:repeat(2,1fr)}.summarygrid{grid-template-columns:1fr}}@media(max-width:520px){.grid,.form{grid-template-columns:1fr}}
 </style>
 </head>
@@ -22,11 +24,13 @@
 
 <div class="section"><h2>Current Totals</h2><div class="grid"><div class="card"><small>Today's Packages</small><div class="big" id="todayPkgs">0</div></div><div class="card"><small>Today's Miles</small><div class="big gold" id="todayMiles">0.0 mi</div></div><div class="card"><small>This Week Miles</small><div class="big gold" id="weekMiles">0.0 mi</div></div><div class="card"><small>This Month Miles</small><div class="big gold" id="monthMiles">0.0 mi</div></div></div><div class="grid"><div class="card"><small>This Week Packages</small><div class="big" id="weekPkgs">0</div><div class="muted" id="weekGoalText"></div><div class="progress"><div id="weekProgress"></div></div></div><div class="card"><small>This Month Revenue</small><div class="big blue" id="monthRev">$0.00</div><div class="muted" id="monthPkgs"></div></div><div class="card"><small>All-Time Net</small><div class="big green" id="allNet">$0.00</div><div class="note" id="allPayLine"></div></div><div class="card"><small>Today's Revenue</small><div class="big blue" id="todayRev">$0.00</div></div></div></div>
 
-<div class="section"><div class="top"><h2>Add Daily Route</h2><div><span class="note">Today's entries stay filled until the next day. Saved routes remain in history.</span><span class="saved" id="saveState"></span></div></div><div class="form"><div><label>Date</label><input id="date" type="date"></div><div><label>Driver</label><select id="driver"><option>Me</option><option>Mom</option><option>Tisha</option><option>AJ</option></select></div><div><label>Packages</label><input id="packages" type="number" min="0"></div><div><label>Hours</label><input id="hours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="startMiles" type="number" min="0" step=".1" placeholder="Before route"></div><div><label>Ending Odometer</label><input id="endMiles" type="number" min="0" step=".1" placeholder="After route"></div><div><label>Daily Miles (auto)</label><input id="miles" type="number" min="0" step=".1" readonly placeholder="End − Start"></div><div><label>Other Expense</label><input id="expense" type="number" min="0" step=".01"></div></div><div class="calcbox"><b>Daily mileage:</b> <span id="mileagePreview">0.0 mi</span><div class="note">Starting and ending odometer can be saved separately. Save the starting reading before the route, then enter the ending reading later; the tracker will complete the same daily route and calculate miles automatically.</div></div><div class="actions"><button class="primary" id="saveBtn" type="button">Save Route</button><button class="secondary" id="csvBtn" type="button">Export CSV</button><button class="secondary" id="backupBtn" type="button">Backup Data</button><button class="secondary" id="restoreBtn" type="button">Restore Imported History</button><button class="danger" id="clearBtn" type="button">Clear All</button></div></div>
+<div class="section"><div class="top"><h2>Add Daily Route</h2><div><span class="note">Today's entries stay filled until the next day. Saved routes remain in history.</span><span class="saved" id="saveState"></span></div></div><div class="form"><div><label>Date</label><input id="date" type="date"></div><div><label>Driver</label><select id="driver" class="driverSelect"><option>Me</option><option>Mom</option><option>Tisha</option><option>AJ</option><option>Suzanne</option></select></div><div><label>Packages</label><input id="packages" type="number" min="0"></div><div><label>Hours</label><input id="hours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="startMiles" type="number" min="0" step=".1" placeholder="Before route"></div><div><label>Ending Odometer</label><input id="endMiles" type="number" min="0" step=".1" placeholder="After route"></div><div><label>Daily Miles (auto)</label><input id="miles" type="number" min="0" step=".1" readonly placeholder="End − Start"></div><div><label>Other Expense</label><input id="expense" type="number" min="0" step=".01"></div></div><div class="calcbox"><b>Daily mileage:</b> <span id="mileagePreview">0.0 mi</span><div class="note">Starting and ending odometer can be saved separately. Save the starting reading before the route, then enter the ending reading later; the tracker will complete the same daily route and calculate miles automatically.</div></div><div class="actions"><button class="primary" id="saveBtn" type="button">Save Route</button><button class="secondary" id="csvBtn" type="button">Export CSV</button><button class="secondary" id="backupBtn" type="button">Backup Data</button><button class="secondary" id="restoreBtn" type="button">Restore Imported History</button><button class="danger" id="clearBtn" type="button">Clear All</button></div></div>
 
 <div class="section"><div class="top"><h2>Performance History</h2><div class="tabs"><button id="dailyBtn" class="tabactive" type="button">Daily</button><button id="weeklyBtn" type="button">Weekly</button><button id="monthlyBtn" type="button">Monthly</button></div></div><div id="summary" class="summarygrid"></div></div>
-<div class="section"><div class="top"><h2>Full Route History</h2><div class="pill" id="historyRange"></div></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Driver</th><th>Packages</th><th>Revenue</th><th>Start Odometer</th><th>End Odometer</th><th>Daily Miles</th><th>Hours</th><th>Pkgs/Hr</th><th>Employee Pay</th><th>Expense</th><th>Net</th><th>Source</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></div>
+<div class="section"><div class="top"><h2>Full Route History</h2><div class="pill" id="historyRange"></div></div><div class="filters"><div><label>Driver</label><select id="fDriver"><option value="">All drivers</option></select></div><div><label>From</label><input id="fFrom" type="date"></div><div><label>To</label><input id="fTo" type="date"></div><div><label>Sort by</label><select id="fSort"><option value="date-desc">Date (newest first)</option><option value="date-asc">Date (oldest first)</option><option value="driver">Driver A–Z</option><option value="pkgs-desc">Packages (most first)</option><option value="pkgs-asc">Packages (fewest first)</option></select></div><div><label>&nbsp;</label><button class="secondary" id="fReset" type="button">Reset filters</button></div></div><div class="note" id="filterTotals"></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Driver</th><th>Packages</th><th>Revenue</th><th>Start Odometer</th><th>End Odometer</th><th>Daily Miles</th><th>Hours</th><th>Pkgs/Hr</th><th>Employee Pay</th><th>Expense</th><th>Net</th><th>Source</th><th class="rowact">Actions</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+<div class="section"><div class="top"><h2>Drivers</h2><span class="note">Drivers shown in the dropdowns. Removing a name here does not delete any of their entries.</span></div><div class="chips" id="driverChips"></div><div class="actions"><input id="newDriver" placeholder="Add a driver name" style="max-width:260px"><button class="secondary" id="addDriverBtn" type="button">Add Driver</button></div></div>
 </div>
+<div class="modalbg" id="editModal"><div class="modal"><div class="top"><h2 style="margin:0">Edit Entry</h2><span class="note" id="editInfo"></span></div><div class="form" style="margin-top:12px"><div><label>Date</label><input id="eDate" type="date"></div><div><label>Driver</label><select id="eDriver" class="driverSelect"></select></div><div><label>Packages</label><input id="ePackages" type="number" min="0"></div><div><label>Hours</label><input id="eHours" type="number" min="0" step=".01"></div><div><label>Starting Odometer</label><input id="eStart" type="number" min="0" step=".1"></div><div><label>Ending Odometer</label><input id="eEnd" type="number" min="0" step=".1"></div><div><label>Daily Miles</label><input id="eMiles" type="number" min="0" step=".1"></div><div><label>Other Expense</label><input id="eExpense" type="number" min="0" step=".01"></div></div><div class="note">If both odometer readings are filled in, daily miles are calculated from them.</div><div class="actions"><button class="primary" id="eSave" type="button">Save Changes</button><button class="secondary" id="eCancel" type="button">Cancel</button></div></div></div>
 <script src="/history-data.js"></script>
 <script>
 const AMAZON_RATE=2.5,DRIVER_RATE=1.1,WEEKLY_GOAL=350,$=id=>document.getElementById(id),imported=Array.isArray(window.AMAZON_HUB_HISTORY)?window.AMAZON_HUB_HISTORY:[];
@@ -38,6 +42,7 @@ const saved=safeParse(localStorage.getItem(ENTRY_KEY),null);entries=Array.isArra
 if(!Array.isArray(saved))localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));
 // Authoritative package corrections. Collapse duplicate same-day "Me" rows while preserving hours/odometer/expense.
 (function applyAuthoritativeCorrections(){
+  const deadCorrectionIds=new Set(safeParse(localStorage.getItem('amazonHubDeletedIds'),[]).map(String));
   const corrections=[
     {date:'2026-09-19',driver:'Me',packages:44,id:100126},
     {date:'2026-09-29',driver:'Me',packages:40,id:100127}
@@ -45,6 +50,7 @@ if(!Array.isArray(saved))localStorage.setItem(ENTRY_KEY,JSON.stringify(entries))
   for(const correction of corrections){
     const idx=[];entries.forEach((e,i)=>{if(e.date===correction.date&&e.driver===correction.driver)idx.push(i)});
     if(idx.length){
+      if(idx.some(i=>entries[i].editedAt))continue;
       const rows=idx.map(i=>entries[i]);
       const keep={...rows[0],packages:correction.packages,source:'Corrected performance history'};
       for(const e of rows){
@@ -55,7 +61,7 @@ if(!Array.isArray(saved))localStorage.setItem(ENTRY_KEY,JSON.stringify(entries))
       }
       if(keep.startMiles!=null&&keep.endMiles!=null&&Number(keep.endMiles)>=Number(keep.startMiles))keep.miles=Number(keep.endMiles)-Number(keep.startMiles);
       entries=entries.filter((e,i)=>!idx.includes(i));entries.push(keep);
-    }else{
+    }else if(!entries.some(e=>String(e.id)===String(correction.id))&&!deadCorrectionIds.has(String(correction.id))){
       entries.push({id:correction.id,date:correction.date,driver:correction.driver,packages:correction.packages,hours:0,miles:0,expense:0,source:'Corrected performance history'});
     }
   }
@@ -67,6 +73,51 @@ function calc(e){const rev=Number(e.packages||0)*AMAZON_RATE,pay=e.driver==='Me'
 function startOfWeek(d){const x=new Date(d+'T12:00:00'),day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x.toISOString().slice(0,10)}
 function totals(list){return list.reduce((t,e)=>{const c=calc(e);t.pkgs+=Number(e.packages||0);t.rev+=c.rev;t.pay+=c.pay;t.exp+=Number(e.expense||0);t.net+=c.net;t.hours+=Number(e.hours||0);t.miles+=routeMiles(e);return t},{pkgs:0,rev:0,pay:0,exp:0,net:0,hours:0,miles:0})}
 function persist(){try{localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));$('saveState').textContent='Saved locally • syncing…';window.pushHubState?.();return true}catch(e){alert('Could not save route data on this device: '+e.message);return false}}
+const DELETED_KEY='amazonHubDeletedIds',DRIVERS_KEY='amazonHubDrivers';
+let hubDrivers=safeParse(localStorage.getItem(DRIVERS_KEY),null)||['Me','Mom','Tisha','AJ','Suzanne'];
+function deletedIdSet(){return new Set(safeParse(localStorage.getItem(DELETED_KEY),[]).map(String))}
+function applyHubMeta(data){
+  if(!data)return;
+  if(Array.isArray(data.deleted)){const ids=data.deleted.map(d=>String(d.id));try{localStorage.setItem(DELETED_KEY,JSON.stringify(ids))}catch{}const dead=new Set(ids);entries=entries.filter(e=>!dead.has(String(e.id)))}
+  if(Array.isArray(data.drivers)&&data.drivers.length){hubDrivers=data.drivers.slice();try{localStorage.setItem(DRIVERS_KEY,JSON.stringify(hubDrivers))}catch{}renderDrivers()}
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fillDriverSelect(sel,list,keep){if(!sel)return;const cur=keep??sel.value;const opts=list.slice();if(cur&&!opts.includes(cur))opts.push(cur);sel.innerHTML=opts.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');if(cur)sel.value=cur}
+function renderDrivers(){
+  const all=hubDrivers.slice();
+  fillDriverSelect($('driver'),all);
+  const fd=$('fDriver');if(fd){const cur=fd.value,names=[...new Set([...all,...entries.map(e=>e.driver).filter(Boolean)])];fd.innerHTML='<option value="">All drivers</option>'+names.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');fd.value=names.includes(cur)?cur:''}
+  const chips=$('driverChips');if(chips)chips.innerHTML=all.map(d=>`<span class="chip">${esc(d)}${d==='Me'?'':`<button type="button" title="Remove from list" data-remove-driver="${esc(d)}">✕</button>`}</span>`).join('');
+}
+async function saveDrivers(list){
+  try{const r=await fetch('/api/hub-drivers',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify({drivers:list})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));applyHubMeta(data)}
+  catch(e){alert('Could not save the driver list: '+e.message)}
+}
+function addDriver(){const n=$('newDriver').value.trim();if(!n)return;if(hubDrivers.some(d=>d.toLowerCase()===n.toLowerCase()))return alert(n+' is already in the list.');$('newDriver').value='';saveDrivers([...hubDrivers,n])}
+function removeDriver(n){if(n==='Me')return;if(!confirm(`Remove ${n} from the driver list? Their past entries stay in history.`))return;saveDrivers(hubDrivers.filter(d=>d!==n))}
+function applyServerEntries(data){applyHubMeta(data);if(Array.isArray(data.entries)){entries=data.entries.map(e=>({...e}));localStorage.setItem(ENTRY_KEY,JSON.stringify(entries))}renderDrivers();render();if(!formDirty&&!loadSavedRoute($('date').value,$('driver').value))clearDailyFields()}
+async function entryRequest(method,id,body){
+  const r=await fetch('/api/hub-state/entries/'+encodeURIComponent(id),{method,headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:body?JSON.stringify(body):undefined});
+  const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));return data;
+}
+let editingId=null;
+function openEdit(id){
+  const e=entries.find(x=>String(x.id)===String(id));if(!e)return alert('That entry was not found. Refresh and try again.');
+  editingId=String(e.id);
+  $('eDate').value=e.date||'';fillDriverSelect($('eDriver'),hubDrivers,e.driver);
+  $('ePackages').value=e.packages??0;$('eHours').value=e.hours??0;$('eStart').value=e.startMiles??'';$('eEnd').value=e.endMiles??'';$('eMiles').value=routeMiles(e)||'';$('eExpense').value=e.expense??0;
+  $('editInfo').textContent=(e.source||'')+(e.editedAt?' • last edited '+new Date(e.editedAt).toLocaleString():'');
+  $('editModal').classList.add('open');
+}
+function closeEdit(){editingId=null;$('editModal').classList.remove('open')}
+async function saveEdit(){
+  if(!editingId)return;
+  const body={date:$('eDate').value,driver:$('eDriver').value,packages:$('ePackages').value,hours:$('eHours').value,startMiles:$('eStart').value,endMiles:$('eEnd').value,miles:$('eMiles').value,expense:$('eExpense').value};
+  if(!body.date)return alert('Choose a date.');
+  if(!confirm(`Save changes to this entry (${body.driver}, ${body.date}, ${body.packages||0} packages)?`))return;
+  try{const data=await entryRequest('PUT',editingId,body);closeEdit();applyServerEntries(data);const s=$('saveState');if(s){s.textContent='Entry updated ✓';setTimeout(()=>{if(s.textContent==='Entry updated ✓')s.textContent=''},2500)}}
+  catch(e){alert('Could not save the change: '+e.message)}
+}
 let hubSyncBusy=false,hubPushBusy=false,hubPushPending=false;
 async function syncHubState(){
   if(hubSyncBusy)return;hubSyncBusy=true;
@@ -74,6 +125,7 @@ async function syncHubState(){
     const r=await fetch('/api/hub-state?ts='+Date.now(),{cache:'no-store'});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
+    applyHubMeta(data);
     if(Array.isArray(data.entries)&&data.entries.length){
       entries=data.entries.map(e=>({...e}));
       localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));
@@ -92,9 +144,11 @@ async function pushHubState(){
   hubPushBusy=true;
   try{
     const stops=safeParse(localStorage.getItem('amazonHubStops'),[]);
-    const r=await fetch('/api/hub-state',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify({entries,stops})});
+    const dead=deletedIdSet();
+    const r=await fetch('/api/hub-state',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify({entries:entries.filter(e=>!dead.has(String(e.id))),stops})});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
+    applyHubMeta(data);
     if(Array.isArray(data.entries)){entries=data.entries.map(e=>({...e}));localStorage.setItem(ENTRY_KEY,JSON.stringify(entries));}
     if(Array.isArray(data.stops))localStorage.setItem('amazonHubStops',JSON.stringify(data.stops));
     render();
@@ -230,11 +284,23 @@ function addEntry(){
   $('expense').value=hasExpense?expense:(entries[matchIndex>=0?matchIndex:entries.length-1]?.expense??'');
   preview();render()
 }
-function del(id){entries=entries.filter(e=>String(e.id)!==String(id));persist();render()}
+async function del(id){
+  const e=entries.find(x=>String(x.id)===String(id));if(!e)return;
+  if(!confirm(`Delete this entry permanently?\n\n${e.driver} • ${e.date} • ${e.packages||0} packages\n\nThis removes it from the tracker on every device.`))return;
+  try{const data=await entryRequest('DELETE',id);applyServerEntries(data);const s=$('saveState');if(s){s.textContent='Entry deleted ✓';setTimeout(()=>{if(s.textContent==='Entry deleted ✓')s.textContent=''},2500)}}
+  catch(err){alert('Could not delete the entry: '+err.message)}
+}
+function historyRows(){
+  const d=$('fDriver')?.value||'',from=$('fFrom')?.value||'',to=$('fTo')?.value||'',sort=$('fSort')?.value||'date-desc';
+  const list=entries.filter(e=>(!d||e.driver===d)&&(!from||String(e.date)>=from)&&(!to||String(e.date)<=to));
+  const byDate=(a,b)=>String(a.date).localeCompare(String(b.date));
+  const cmp={'date-desc':(a,b)=>byDate(b,a),'date-asc':byDate,'driver':(a,b)=>String(a.driver).localeCompare(String(b.driver))||byDate(b,a),'pkgs-desc':(a,b)=>Number(b.packages||0)-Number(a.packages||0)||byDate(b,a),'pkgs-asc':(a,b)=>Number(a.packages||0)-Number(b.packages||0)||byDate(b,a)}[sort]||((a,b)=>byDate(b,a));
+  return list.sort(cmp);
+}
 function restoreHistory(){const manual=entries.filter(e=>!String(e.source||'').startsWith('Imported'));entries=[...imported.map(e=>({...e})),...manual];persist();render()}
 function clearAll(){if(confirm('Delete all saved route data from this browser?')){entries=[];persist();render()}}
 function groupKey(e){return view==='daily'?e.date:view==='weekly'?startOfWeek(e.date):e.date.slice(0,7)}
-function render(){const today=localDate(),week=startOfWeek(today),month=today.slice(0,7),at=totals(entries),tt=totals(entries.filter(e=>e.date===today)),wt=totals(entries.filter(e=>startOfWeek(e.date)===week)),mt=totals(entries.filter(e=>String(e.date||'').slice(0,7)===month)),md=entries.filter(e=>routeMiles(e)>0).length;$('allPkgs').textContent=at.pkgs.toLocaleString();$('allRev').textContent=money(at.rev);$('allHours').textContent=at.hours.toFixed(1);$('avgPph').textContent=(at.hours?at.pkgs/at.hours:0).toFixed(1)+' pkgs/hr';$('allMiles').textContent=at.miles.toFixed(1)+' mi';$('avgMilesDay').textContent=(md?at.miles/md:0).toFixed(1)+' mi/day';$('allNet').textContent=money(at.net);$('allPayLine').textContent='Driver payroll '+money(at.pay);$('historyDays').textContent=entries.filter(e=>Number(e.packages||0)>0||e.startMiles!=null||e.endMiles!=null||routeMiles(e)>0||Number(e.hours||0)>0||Number(e.expense||0)>0).length+' recorded days';$('todayPkgs').textContent=tt.pkgs;$('todayRev').textContent=money(tt.rev);$('todayMiles').textContent=tt.miles.toFixed(1)+' mi';$('weekMiles').textContent=wt.miles.toFixed(1)+' mi';$('monthMiles').textContent=mt.miles.toFixed(1)+' mi';$('weekPkgs').textContent=wt.pkgs;$('weekGoalText').textContent=`${wt.pkgs} / ${WEEKLY_GOAL} (${Math.min(100,Math.round((wt.pkgs/WEEKLY_GOAL)*100))}%)`;$('weekProgress').style.width=Math.min(100,(wt.pkgs/WEEKLY_GOAL)*100)+'%';$('monthRev').textContent=money(mt.rev);$('monthPkgs').textContent=mt.pkgs+' packages';const dates=entries.map(e=>e.date).filter(Boolean).sort();$('historyRange').textContent=dates.length?dates[0]+' → '+dates[dates.length-1]:'No history';$('rows').innerHTML=entries.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(e=>{const c=calc(e),m=routeMiles(e);return `<tr><td>${e.date}</td><td>${e.driver}</td><td>${e.packages||0}</td><td>${money(c.rev)}</td><td>${e.startMiles??'—'}</td><td>${e.endMiles??'—'}</td><td>${m.toFixed(1)}</td><td>${Number(e.hours||0).toFixed(2)}</td><td>${c.pph.toFixed(1)}</td><td>${money(c.pay)}</td><td>${money(e.expense)}</td><td>${money(c.net)}</td><td>${e.source||''}</td><td><button type="button" onclick="del('${e.id}')">Delete</button></td></tr>`}).join('');const groups={};entries.forEach(e=>{const k=groupKey(e);if(!k)return;if(!groups[k])groups[k]=[];groups[k].push(e)});$('summary').innerHTML=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,24).map(([k,list])=>{const g=totals(list);return `<div class="card"><small>${view==='weekly'?'Week of ':view==='monthly'?'Month ':'Date '}${k}</small><div class="big">${g.pkgs} pkgs</div><div class="muted">Revenue ${money(g.rev)} • ${g.hours.toFixed(1)} hrs</div><div class="gold"><b>${g.miles.toFixed(1)} miles</b></div><div class="green"><b>Net ${money(g.net)}</b></div></div>`}).join('')||'<div class="muted">No route data yet.</div>'}
+function render(){const today=localDate(),week=startOfWeek(today),month=today.slice(0,7),at=totals(entries),tt=totals(entries.filter(e=>e.date===today)),wt=totals(entries.filter(e=>startOfWeek(e.date)===week)),mt=totals(entries.filter(e=>String(e.date||'').slice(0,7)===month)),md=entries.filter(e=>routeMiles(e)>0).length;$('allPkgs').textContent=at.pkgs.toLocaleString();$('allRev').textContent=money(at.rev);$('allHours').textContent=at.hours.toFixed(1);$('avgPph').textContent=(at.hours?at.pkgs/at.hours:0).toFixed(1)+' pkgs/hr';$('allMiles').textContent=at.miles.toFixed(1)+' mi';$('avgMilesDay').textContent=(md?at.miles/md:0).toFixed(1)+' mi/day';$('allNet').textContent=money(at.net);$('allPayLine').textContent='Driver payroll '+money(at.pay);$('historyDays').textContent=entries.filter(e=>Number(e.packages||0)>0||e.startMiles!=null||e.endMiles!=null||routeMiles(e)>0||Number(e.hours||0)>0||Number(e.expense||0)>0).length+' recorded days';$('todayPkgs').textContent=tt.pkgs;$('todayRev').textContent=money(tt.rev);$('todayMiles').textContent=tt.miles.toFixed(1)+' mi';$('weekMiles').textContent=wt.miles.toFixed(1)+' mi';$('monthMiles').textContent=mt.miles.toFixed(1)+' mi';$('weekPkgs').textContent=wt.pkgs;$('weekGoalText').textContent=`${wt.pkgs} / ${WEEKLY_GOAL} (${Math.min(100,Math.round((wt.pkgs/WEEKLY_GOAL)*100))}%)`;$('weekProgress').style.width=Math.min(100,(wt.pkgs/WEEKLY_GOAL)*100)+'%';$('monthRev').textContent=money(mt.rev);$('monthPkgs').textContent=mt.pkgs+' packages';const dates=entries.map(e=>e.date).filter(Boolean).sort();$('historyRange').textContent=dates.length?dates[0]+' → '+dates[dates.length-1]:'No history';const hr=historyRows(),ft=totals(hr);if($('filterTotals'))$('filterTotals').textContent=`Showing ${hr.length} of ${entries.length} entries • ${ft.pkgs.toLocaleString()} packages • revenue ${money(ft.rev)} • driver pay ${money(ft.pay)} • net ${money(ft.net)}`;$('rows').innerHTML=hr.map(e=>{const c=calc(e),m=routeMiles(e);return `<tr><td>${esc(e.date)}</td><td>${esc(e.driver)}</td><td>${e.packages||0}</td><td>${money(c.rev)}</td><td>${e.startMiles??'—'}</td><td>${e.endMiles??'—'}</td><td>${m.toFixed(1)}</td><td>${Number(e.hours||0).toFixed(2)}</td><td>${c.pph.toFixed(1)}</td><td>${money(c.pay)}</td><td>${money(e.expense)}</td><td>${money(c.net)}</td><td>${esc(e.source||'')}${e.editedAt?' <span class="pill">edited</span>':''}</td><td class="rowact"><button class="secondary rowbtn" type="button" onclick="openEdit('${esc(e.id)}')">Edit</button><button class="danger rowbtn" type="button" onclick="del('${esc(e.id)}')">Delete</button></td></tr>`}).join('');const groups={};entries.forEach(e=>{const k=groupKey(e);if(!k)return;if(!groups[k])groups[k]=[];groups[k].push(e)});$('summary').innerHTML=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,24).map(([k,list])=>{const g=totals(list);return `<div class="card"><small>${view==='weekly'?'Week of ':view==='monthly'?'Month ':'Date '}${k}</small><div class="big">${g.pkgs} pkgs</div><div class="muted">Revenue ${money(g.rev)} • ${g.hours.toFixed(1)} hrs</div><div class="gold"><b>${g.miles.toFixed(1)} miles</b></div><div class="green"><b>Net ${money(g.net)}</b></div></div>`}).join('')||'<div class="muted">No route data yet.</div>'}
 function setView(v){view=v;['daily','weekly','monthly'].forEach(x=>$(x+'Btn').classList.toggle('tabactive',x===v));render()}
 async function refreshEta(){try{const r=await fetch('/api/eta',{cache:'no-store'}),d=await r.json(),e=d.latest;if(!e)return;$('etaDriver').textContent=e.driver||'Driver';$('etaPackages').textContent=e.packages??'—';$('etaTime').textContent=e.eta||'—';$('etaStatus').textContent=e.status||'Update received';$('etaMessage').textContent=e.body||'';$('etaReceived').textContent=e.receivedAt?new Date(e.receivedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'—'}catch{}}
 function exportCSV(){const head=['Date','Driver','Packages','Revenue','Start Odometer','End Odometer','Daily Miles','Hours','Packages per Hour','Employee Pay','Other Expense','Net','Source'],lines=[head.join(',')];entries.forEach(e=>{const c=calc(e);lines.push([e.date,e.driver,e.packages||0,c.rev.toFixed(2),e.startMiles??'',e.endMiles??'',routeMiles(e).toFixed(1),Number(e.hours||0).toFixed(2),c.pph.toFixed(2),c.pay.toFixed(2),Number(e.expense||0).toFixed(2),c.net.toFixed(2),e.source||''].join(','))});download('amazon-hub-routes.csv',lines.join('\n'),'text/csv')}
@@ -244,6 +310,11 @@ function download(name,text,type){const a=document.createElement('a');a.href=URL
 $('date').addEventListener('change',switchRouteSelection);
 $('driver').addEventListener('change',switchRouteSelection);
 $('saveBtn').addEventListener('click',addEntry);$('csvBtn').addEventListener('click',exportCSV);$('backupBtn').addEventListener('click',downloadBackup);$('restoreBtn').addEventListener('click',restoreHistory);$('clearBtn').addEventListener('click',clearAll);$('dailyBtn').addEventListener('click',()=>setView('daily'));$('weeklyBtn').addEventListener('click',()=>setView('weekly'));$('monthlyBtn').addEventListener('click',()=>setView('monthly'));
+['fDriver','fFrom','fTo','fSort'].forEach(id=>$(id).addEventListener('change',render));
+$('fReset').addEventListener('click',()=>{$('fDriver').value='';$('fFrom').value='';$('fTo').value='';$('fSort').value='date-desc';render()});
+$('eSave').addEventListener('click',saveEdit);$('eCancel').addEventListener('click',closeEdit);$('editModal').addEventListener('click',ev=>{if(ev.target.id==='editModal')closeEdit()});
+$('addDriverBtn').addEventListener('click',addDriver);$('driverChips').addEventListener('click',ev=>{const b=ev.target.closest('[data-remove-driver]');if(b)removeDriver(b.getAttribute('data-remove-driver'))});$('newDriver').addEventListener('keydown',ev=>{if(ev.key==='Enter')addDriver()});
+renderDrivers();
 loadDraft();render();syncHubState();refreshEta();
 setInterval(refreshEta,15000);setInterval(syncHubState,10000);
 setInterval(checkDailyRollover,15000);
