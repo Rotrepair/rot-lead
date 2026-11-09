@@ -28,16 +28,144 @@ const requiredRouteEntries=[
   {id:100140,date:'2026-09-17',driver:'Me',packages:37,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'}
 ];
 const DEFAULT_DRIVERS=['Me','Mom','Tisha','AJ','Suzanne'];
+const HUB_LIST=[{id:'rotrepair',name:'Right On Time Repair'},{id:'smg',name:'SMG Logistics'}];
+const DEFAULT_HUB='Right On Time Repair';
+const WEEKDAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const ROSTER_STATUSES=['active','occasional','onboarding','inactive'];
+const HIRING_NOTE='Hiring: 1 consistent 5-day driver';
+const ROSTER_SEED=[
+  {name:'Me',displayName:'Eric',phone:'',email:'',role:'Owner',availability:WEEKDAYS.slice(),maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:'Main hub owner. Past routes stay saved as Me.'},
+  {name:'Mom',displayName:'Mom',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
+  {name:'Tisha',displayName:'Tisha',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
+  {name:'AJ',displayName:'AJ',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
+  {name:'Suzanne',displayName:'Suzanne',phone:'',email:'',role:'Driver',availability:['Mon','Wed','Thu'],maybeDays:['Thu'],status:'active',hubs:[DEFAULT_HUB],note:'Thursday is maybe.'},
+  {name:'Valerie',displayName:'Valerie',phone:'',email:'',role:'Point of contact',availability:[],maybeDays:[],status:'onboarding',hubs:['SMG Logistics'],note:'Rarely drives. Point of contact for SMG Logistics.'},
+  {name:'Roxanne',displayName:'Roxanne',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'occasional',hubs:[DEFAULT_HUB],note:''}
+];
 function normDeleted(list){return Array.isArray(list)?list.filter(d=>d&&d.id!=null).map(d=>({...d,id:String(d.id)})):[]}
 function normDrivers(list){
   const out=[];for(const d of Array.isArray(list)?list:[]){const n=String(d||'').trim().slice(0,40);if(n&&!out.some(x=>x.toLowerCase()===n.toLowerCase()))out.push(n)}
   if(!out.includes('Me'))out.unshift('Me');
   return out;
 }
+function canonicalHub(value){
+  const s=String(value||'').trim();
+  if(!s)return '';
+  const hit=HUB_LIST.find(h=>h.name.toLowerCase()===s.toLowerCase()||h.id.toLowerCase()===s.toLowerCase());
+  return hit?hit.name:'';
+}
+function entryHubName(e){return canonicalHub(e?.hub)||DEFAULT_HUB}
+function normDays(list){
+  const out=[];
+  for(const d of Array.isArray(list)?list:[]){
+    const hit=WEEKDAYS.find(x=>x.toLowerCase()===String(d||'').trim().toLowerCase());
+    if(hit&&!out.includes(hit))out.push(hit);
+  }
+  return out;
+}
+function normRosterRow(raw){
+  const name=String(raw?.name||'').trim().slice(0,40);
+  if(!name)return null;
+  const seed=ROSTER_SEED.find(r=>r.name.toLowerCase()===name.toLowerCase());
+  const src=raw&&typeof raw==='object'?raw:{};
+  const storedName=seed?.name==='Me'||name.toLowerCase()==='me'?'Me':name;
+  const availability=normDays(src.availability!=null?src.availability:seed?.availability||[]);
+  const maybeDays=normDays(src.maybeDays!=null?src.maybeDays:seed?.maybeDays||[]).filter(d=>availability.includes(d));
+  const hubs=[];
+  for(const h of Array.isArray(src.hubs)?src.hubs:(seed?.hubs||[DEFAULT_HUB])){const n=canonicalHub(h);if(n&&!hubs.includes(n))hubs.push(n)}
+  let status=ROSTER_STATUSES.includes(src.status)?src.status:(seed?.status||'active');
+  if(storedName==='Me')status='active';
+  return {
+    name:storedName,
+    displayName:String(src.displayName!=null?src.displayName:(seed?.displayName||'')).trim().slice(0,40)||(storedName==='Me'?'Eric':storedName),
+    phone:String(src.phone!=null?src.phone:(seed?.phone||'')).trim().slice(0,40),
+    email:String(src.email!=null?src.email:(seed?.email||'')).trim().slice(0,80),
+    role:String(src.role!=null?src.role:(seed?.role||'')).trim().slice(0,40)||(storedName==='Me'?'Owner':'Driver'),
+    availability,maybeDays,status,
+    hubs:hubs.length?hubs:[DEFAULT_HUB],
+    note:String(src.note!=null?src.note:(seed?.note||'')).trim().slice(0,200)
+  };
+}
+function driversFromRoster(roster){
+  return normDrivers(roster.filter(r=>r&&r.status!=='inactive').map(r=>r.name));
+}
+function buildRoster(state){
+  const rosterMissing=!Array.isArray(state.roster);
+  let drivers=normDrivers(Array.isArray(state.drivers)?state.drivers:DEFAULT_DRIVERS);
+  if(rosterMissing){
+    for(const name of ['Valerie','Roxanne']){
+      if(!drivers.some(d=>d.toLowerCase()===name.toLowerCase()))drivers.push(name);
+    }
+  }
+  const byName=new Map();
+  if(!rosterMissing){
+    for(const raw of state.roster){
+      const row=normRosterRow(raw);
+      if(row)byName.set(row.name.toLowerCase(),row);
+    }
+  }
+  for(const name of drivers){
+    const key=name.toLowerCase();
+    if(byName.has(key))continue;
+    const seed=ROSTER_SEED.find(r=>r.name.toLowerCase()===key);
+    byName.set(key,normRosterRow(seed||{name}));
+  }
+  const roster=[...byName.values()];
+  const rank=new Map(drivers.map((n,i)=>[n.toLowerCase(),i]));
+  roster.sort((a,b)=>(rank.has(a.name.toLowerCase())?rank.get(a.name.toLowerCase()):1000)-(rank.has(b.name.toLowerCase())?rank.get(b.name.toLowerCase()):1000)||a.name.localeCompare(b.name));
+  return {drivers:driversFromRoster(roster),roster};
+}
+function normIntake(list){
+  const map=new Map();
+  for(const raw of Array.isArray(list)?list:[]){
+    if(!raw||!/^\d{4}-\d{2}-\d{2}$/.test(String(raw.date||'')))continue;
+    const hub=canonicalHub(raw.hub);
+    if(!hub)continue;
+    const n=Number(raw.packages);
+    if(!Number.isFinite(n)||n<0||n>100000)continue;
+    map.set(String(raw.date)+'|'+hub,{date:String(raw.date),hub,packages:Math.round(n),updatedAt:raw.updatedAt||null});
+  }
+  return [...map.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.hub.localeCompare(b.hub));
+}
+function normRequests(list){
+  const out=[];
+  for(const raw of Array.isArray(list)?list:[]){
+    if(!raw||raw.id==null)continue;
+    const status=['pending','approved','declined'].includes(raw.status)?raw.status:'pending';
+    const packages=Number(raw.packages);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(raw.date||''))||!canonicalHub(raw.hub)||!Number.isFinite(packages))continue;
+    const row={
+      id:String(raw.id).slice(0,40),
+      driver:String(raw.driver||'').trim().slice(0,40),
+      hub:canonicalHub(raw.hub),
+      date:String(raw.date),
+      packages:Math.max(0,Math.round(packages)),
+      note:String(raw.note||'').trim().slice(0,280),
+      status,
+      createdAt:raw.createdAt||null,
+      updatedAt:raw.updatedAt||null
+    };
+    if(status==='approved'){
+      const approved=Number(raw.approvedPackages??raw.packages);
+      row.approvedPackages=Number.isFinite(approved)?Math.max(0,Math.round(approved)):row.packages;
+    }
+    if(raw.decidedAt)row.decidedAt=raw.decidedAt;
+    out.push(row);
+  }
+  return out.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(b.id).localeCompare(String(a.id)));
+}
+function normHiring(h){
+  if(h&&typeof h==='object')return {open:h.open!==false,note:h.note!=null?String(h.note).trim().slice(0,120):HIRING_NOTE};
+  return {open:true,note:HIRING_NOTE};
+}
+function rosterPublic(roster){
+  return roster.filter(r=>r.status!=='inactive').map(r=>({name:r.name,displayName:r.displayName,hubs:r.hubs,status:r.status,role:r.role}));
+}
 function ensureRequiredEntries(state){
   const deleted=normDeleted(state.deleted);
   const deadIds=new Set(deleted.map(d=>d.id)),deadKeys=new Set(deleted.map(d=>d.date+'|'+d.driver));
-  const out={...state,entries:Array.isArray(state.entries)?state.entries.filter(e=>!deadIds.has(String(e?.id))).map(e=>({...e})):[],stops:Array.isArray(state.stops)?state.stops:[],deleted,drivers:normDrivers(Array.isArray(state.drivers)?state.drivers:DEFAULT_DRIVERS)};
+  const built=buildRoster(state);
+  const out={...state,entries:Array.isArray(state.entries)?state.entries.filter(e=>!deadIds.has(String(e?.id))).map(e=>({...e})):[],stops:Array.isArray(state.stops)?state.stops:[],deleted,drivers:built.drivers,roster:built.roster,intake:normIntake(state.intake),requests:normRequests(state.requests),hiring:normHiring(state.hiring),hubs:HUB_LIST.map(h=>h.name)};
   const keys=new Set(out.entries.map(e=>e?.date+'|'+e?.driver));
   const liveIds=new Set(out.entries.filter(e=>e?.id!=null).map(e=>String(e.id)));
   for(const e of requiredRouteEntries){const k=e.date+'|'+e.driver;if(deadIds.has(String(e.id))||deadKeys.has(k)||liveIds.has(String(e.id)))continue;if(!keys.has(k)){out.entries.push({...e});keys.add(k)}}
@@ -52,18 +180,19 @@ function mergeHubState(current,incoming){
   const map=new Map(),byId=new Map();
   // Deleted entries are remembered by id so an old browser cache can never bring them back.
   const deadIds=new Set(normDeleted(current.deleted).map(d=>d.id));
-  for(const e of current.entries||[])if(e?.date&&e?.driver){map.set(e.date+'|'+e.driver,{...e});if(e.id!=null)byId.set(String(e.id),{...e})}
+  for(const e of current.entries||[])if(e?.date&&e?.driver){map.set(e.date+'|'+e.driver+'|'+entryHubName(e),{...e});if(e.id!=null)byId.set(String(e.id),{...e})}
   for(const e of incoming.entries||[]){
     if(!e?.date||!e?.driver)continue;
     if(e.id!=null&&deadIds.has(String(e.id)))continue;
     // An entry edited from the history table only accepts writes from clients that have seen that edit.
     const known=e.id!=null?byId.get(String(e.id)):null;
     if(known&&known.editedAt&&e.editedAt!==known.editedAt)continue;
-    if(known&&(known.date!==e.date||known.driver!==e.driver))continue;
-    const key=e.date+'|'+e.driver,old=map.get(key)||{},next={...old};
+    if(known&&(known.date!==e.date||known.driver!==e.driver||entryHubName(known)!==entryHubName(e)))continue;
+    const key=e.date+'|'+e.driver+'|'+entryHubName(e),old=map.get(key)||{},next={...old};
     for(const f of ['id','date','driver','packages','hours','startMiles','endMiles','miles','expense','source']){
       if(hasValue(e[f]))next[f]=e[f];
     }
+    if(hasValue(e.hub)){const hub=canonicalHub(e.hub);if(hub)next.hub=hub}
     if(packageCorrections[e.date]!=null&&e.driver==='Me'&&!next.editedAt)next.packages=packageCorrections[e.date];
     if(next.startMiles!=null&&next.endMiles!=null&&Number(next.endMiles)>=Number(next.startMiles))next.miles=Number(next.endMiles)-Number(next.startMiles);
     next.updatedAt=new Date().toISOString(); map.set(key,next);
@@ -73,7 +202,7 @@ function mergeHubState(current,incoming){
   for(const r of current.stops||[])if(r?.date)stopMap.set(r.date,{...r});
   for(const r of incoming.stops||[])if(r?.date&&!clearedStopDates.has(r.date))stopMap.set(r.date,{...stopMap.get(r.date),...r,updatedAt:new Date().toISOString()});
   for(const d of clearedStopDates)stopMap.delete(d);
-  return {entries:[...map.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),stops:[...stopMap.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),deleted:normDeleted(current.deleted),drivers:normDrivers(current.drivers),updatedAt:new Date().toISOString(),revision:Number(current.revision||0)+1};
+  return {entries:[...map.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),stops:[...stopMap.values()].sort((a,b)=>String(a.date).localeCompare(String(b.date))),deleted:normDeleted(current.deleted),drivers:current.drivers,roster:current.roster,intake:normIntake(current.intake),requests:normRequests(current.requests),hiring:normHiring(current.hiring),hubs:HUB_LIST.map(h=>h.name),updatedAt:new Date().toISOString(),revision:Number(current.revision||0)+1};
 }
 function parseMessage(body=''){
   const pkg=body.match(/(\d+)\s*(?:packages?|pkgs?)/i);
@@ -172,7 +301,8 @@ const server=http.createServer(async(req,res)=>{
           const n=Number(v);if(!Number.isFinite(n)||n<0)return json(res,{ok:false,error:'invalid '+f},400);next[f]=n;
         }
         if(next.startMiles!=null&&next.endMiles!=null){if(Number(next.endMiles)<Number(next.startMiles))return json(res,{ok:false,error:'ending odometer is below starting odometer'},400);next.miles=Number(next.endMiles)-Number(next.startMiles)}
-        if(current.entries.some((e,i)=>i!==idx&&e.date===next.date&&e.driver===next.driver))return json(res,{ok:false,error:`There is already an entry for ${next.driver} on ${next.date}. Edit or delete that one instead.`},409);
+        if('hub' in body){const hub=canonicalHub(body.hub);if(!hub)return json(res,{ok:false,error:'invalid hub'},400);next.hub=hub}
+        if(current.entries.some((e,i)=>i!==idx&&e.date===next.date&&e.driver===next.driver&&entryHubName(e)===entryHubName(next)))return json(res,{ok:false,error:`There is already an entry for ${next.driver} on ${next.date} at ${entryHubName(next)}. Edit or delete that one instead.`},409);
         next.editedAt=now;next.updatedAt=now;current.entries[idx]=next;
         current.entries.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
         if(!current.drivers.some(d=>d.toLowerCase()===next.driver.toLowerCase()))current.drivers.push(next.driver);
@@ -193,7 +323,100 @@ const server=http.createServer(async(req,res)=>{
     try{
       const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
       if(!Array.isArray(body.drivers))return json(res,{ok:false,error:'drivers list required'},400);
-      current.drivers=normDrivers(body.drivers);current.updatedAt=new Date().toISOString();current.revision=Number(current.revision||0)+1;
+      let diskDrivers=null;
+      try{const disk=JSON.parse(fs.readFileSync(hubStateFile,'utf8'));if(Array.isArray(disk.drivers))diskDrivers=normDrivers(disk.drivers)}catch{}
+      const baseline=diskDrivers||DEFAULT_DRIVERS.slice();
+      const posted=normDrivers(body.drivers);
+      const roster=current.roster.map(r=>({...r,availability:(r.availability||[]).slice(),maybeDays:(r.maybeDays||[]).slice(),hubs:(r.hubs||[]).slice()}));
+      for(const name of baseline){
+        if(name==='Me'||posted.some(p=>p.toLowerCase()===name.toLowerCase()))continue;
+        const row=roster.find(r=>r.name.toLowerCase()===name.toLowerCase());
+        if(row)row.status='inactive';
+      }
+      for(const name of posted){
+        let row=roster.find(r=>r.name.toLowerCase()===name.toLowerCase());
+        if(!row){row=normRosterRow({name});if(row)roster.push(row)}
+        else if(row.status==='inactive')row.status='active';
+      }
+      const me=roster.find(r=>r.name==='Me');if(me)me.status='active';
+      current.roster=roster;current.drivers=driversFromRoster(roster);current.updatedAt=new Date().toISOString();current.revision=Number(current.revision||0)+1;
+      if(!writeHubState(current))return json(res,{ok:false,error:'save failed'},500);
+      return json(res,{ok:true,...readHubState()});
+    }catch(e){return json(res,{ok:false,error:e.message},400)}
+  }
+  if(reqPath==='/api/hub-roster'&&req.method==='POST'){
+    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
+    try{
+      const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
+      if(!Array.isArray(body.roster))return json(res,{ok:false,error:'roster required'},400);
+      const rows=[];
+      for(const raw of body.roster){
+        const row=normRosterRow(raw);
+        if(row&&!rows.some(r=>r.name.toLowerCase()===row.name.toLowerCase()))rows.push(row);
+      }
+      if(!rows.some(r=>r.name==='Me'))rows.unshift(normRosterRow(ROSTER_SEED[0]));
+      const me=rows.find(r=>r.name==='Me');if(me)me.status='active';
+      current.roster=rows;current.drivers=driversFromRoster(rows);
+      if(body.hiring&&typeof body.hiring==='object')current.hiring=normHiring(body.hiring);
+      current.updatedAt=new Date().toISOString();current.revision=Number(current.revision||0)+1;
+      if(!writeHubState(current))return json(res,{ok:false,error:'save failed'},500);
+      return json(res,{ok:true,...readHubState()});
+    }catch(e){return json(res,{ok:false,error:e.message},400)}
+  }
+  if(reqPath==='/api/hub-intake'&&req.method==='POST'){
+    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
+    try{
+      const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(body.date||'')))return json(res,{ok:false,error:'invalid date'},400);
+      const hub=canonicalHub(body.hub);if(!hub)return json(res,{ok:false,error:'invalid hub'},400);
+      const n=Number(body.packages);if(!Number.isFinite(n)||n<0||n>100000)return json(res,{ok:false,error:'invalid packages'},400);
+      const now=new Date().toISOString();
+      const next=normIntake(current.intake).filter(r=>!(r.date===String(body.date)&&r.hub===hub));
+      next.push({date:String(body.date),hub,packages:Math.round(n),updatedAt:now});
+      current.intake=normIntake(next);current.updatedAt=now;current.revision=Number(current.revision||0)+1;
+      if(!writeHubState(current))return json(res,{ok:false,error:'save failed'},500);
+      return json(res,{ok:true,...readHubState()});
+    }catch(e){return json(res,{ok:false,error:e.message},400)}
+  }
+  if(reqPath==='/api/hub-request-form'&&req.method==='GET'){
+    const current=readHubState();
+    return json(res,{ok:true,hubs:current.hubs,hiring:current.hiring,drivers:rosterPublic(current.roster)});
+  }
+  if(reqPath==='/api/hub-requests'&&req.method==='POST'){
+    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
+    try{
+      const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
+      const person=current.roster.find(r=>r.name.toLowerCase()===String(body.driver||'').trim().toLowerCase()&&r.status!=='inactive');
+      if(!person)return json(res,{ok:false,error:'Choose a driver from the roster.'},400);
+      const hub=canonicalHub(body.hub);if(!hub)return json(res,{ok:false,error:'invalid hub'},400);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(body.date||'')))return json(res,{ok:false,error:'invalid date'},400);
+      const n=Number(body.packages);if(!Number.isFinite(n)||n<1||n>5000)return json(res,{ok:false,error:'Enter the number of packages you want.'},400);
+      const pending=normRequests(current.requests).filter(r=>r.status==='pending'&&r.driver.toLowerCase()===person.name.toLowerCase()&&r.date===String(body.date)&&r.hub===hub);
+      if(pending.length>=3)return json(res,{ok:false,error:'You already have three open requests for that day and hub.'},409);
+      const now=new Date().toISOString();
+      const row={id:'rq'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),driver:person.name,hub,date:String(body.date),packages:Math.round(n),note:String(body.note||'').trim().slice(0,280),status:'pending',createdAt:now,updatedAt:now};
+      current.requests=[row,...normRequests(current.requests)];current.updatedAt=now;current.revision=Number(current.revision||0)+1;
+      if(!writeHubState(current))return json(res,{ok:false,error:'save failed'},500);
+      return json(res,{ok:true,request:row,...readHubState()});
+    }catch(e){return json(res,{ok:false,error:e.message},400)}
+  }
+  const requestMatch=reqPath.match(/^\/api\/hub-requests\/([^/]+)$/);
+  if(requestMatch&&req.method==='POST'){
+    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
+    try{
+      const id=decodeURIComponent(requestMatch[1]),body=JSON.parse(await collect(req)||'{}'),current=readHubState();
+      const idx=current.requests.findIndex(r=>String(r.id)===id);
+      if(idx<0)return json(res,{ok:false,error:'request not found'},404);
+      const action=String(body.action||'');
+      if(action!=='approve'&&action!=='decline')return json(res,{ok:false,error:'action must be approve or decline'},400);
+      const now=new Date().toISOString(),row={...current.requests[idx],updatedAt:now,decidedAt:now};
+      if(action==='decline')row.status='declined';
+      else{
+        const n=Number(body.packages??row.packages);
+        if(!Number.isFinite(n)||n<0||n>5000)return json(res,{ok:false,error:'invalid packages'},400);
+        row.status='approved';row.approvedPackages=Math.round(n);
+      }
+      current.requests[idx]=row;current.requests=normRequests(current.requests);current.updatedAt=now;current.revision=Number(current.revision||0)+1;
       if(!writeHubState(current))return json(res,{ok:false,error:'save failed'},500);
       return json(res,{ok:true,...readHubState()});
     }catch(e){return json(res,{ok:false,error:e.message},400)}
@@ -256,7 +479,7 @@ const server=http.createServer(async(req,res)=>{
       return res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Hub Tracker updated${update.eta?`: ETA ${update.eta}`:''}${update.routeSheetCached?' with route sheet ready':update.routeSheetReceived?' with route sheet received':''}.</Message></Response>`);
     }catch(e){console.error(e);res.writeHead(500,{'Content-Type':'text/plain'});return res.end('Webhook error')}
   }
-  let p=reqPath==='/'?'/index.html':reqPath;
+  let p=reqPath==='/'?'/index.html':reqPath==='/request'?'/request.html':reqPath;
   const filePath=path.join(publicDir,p);
   if(!filePath.startsWith(publicDir)){res.writeHead(403);return res.end('Forbidden')}
   fs.readFile(filePath,(err,data)=>{

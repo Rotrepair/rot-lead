@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Request packages</title>
+<style>
+:root{--panel:#111827;--muted:#94a3b8;--line:#243047;--text:#f8fafc;--blue:#0ea5e9}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#0b1220,#111827);color:var(--text)}
+.wrap{max-width:520px;margin:auto;padding:18px}
+h1{margin:0 0 6px;font-size:28px}
+p{color:var(--muted);line-height:1.4}
+form{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+input,select,button,textarea{width:100%;border-radius:12px;border:1px solid #334155;background:#0b1220;color:#fff;padding:14px;font-size:16px}
+button{background:var(--blue);font-weight:800;cursor:pointer;min-height:48px}
+.msg{min-height:1.4em;font-weight:700}
+.ok{color:#86efac}.err{color:#fca5a5}
+.note{font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Request packages</h1>
+<p>Tell the hub how many packages you want to deliver. Pick your name from the roster.</p>
+<p class="note" id="hiring"></p>
+<form id="form">
+<div><label for="name">Name</label><select id="name" required></select></div>
+<div><label for="hub">Hub</label><select id="hub" required></select></div>
+<div><label for="date">Date</label><input id="date" type="date" required></div>
+<div><label for="packages">Packages wanted</label><input id="packages" type="number" min="1" step="1" inputmode="numeric" required></div>
+<div><label for="note">Note</label><textarea id="note" rows="3" maxlength="280" placeholder="Optional"></textarea></div>
+<button type="submit">Send request</button>
+</form>
+<p class="msg" id="msg"></p>
+<p class="note">Only names already on the roster can be selected. The hub owner approves the count.</p>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function localDate(){const d=new Date(),off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10)}
+let drivers=[];
+function label(d){return d.displayName||d.name}
+function fillHubs(person){
+  if(person&&person.hubs&&person.hubs.length&&[...$('hub').options].some(o=>o.value===person.hubs[0]))$('hub').value=person.hubs[0];
+}
+async function load(){
+  const r=await fetch('/api/hub-request-form',{cache:'no-store'});
+  const data=await r.json();
+  if(!r.ok)throw new Error(data.error||'Could not load the roster');
+  drivers=Array.isArray(data.drivers)?data.drivers:[];
+  $('name').innerHTML=drivers.map(d=>`<option value="${esc(d.name)}">${esc(label(d))}</option>`).join('')||'<option value="">No drivers yet</option>';
+  const hubs=Array.isArray(data.hubs)&&data.hubs.length?data.hubs:['Right On Time Repair','SMG Logistics'];
+  $('hub').innerHTML=hubs.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('');
+  $('date').value=localDate();
+  const hiring=$('hiring');
+  if(data.hiring&&data.hiring.open!==false&&data.hiring.note)hiring.textContent=data.hiring.note;
+  fillHubs(drivers[0]);
+}
+$('name').addEventListener('change',()=>{const person=drivers.find(d=>d.name===$('name').value);fillHubs(person)});
+$('form').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const msg=$('msg');msg.className='msg';msg.textContent='Sending…';
+  const body={driver:$('name').value,hub:$('hub').value,date:$('date').value,packages:Number($('packages').value),note:$('note').value.trim()};
+  try{
+    const r=await fetch('/api/hub-requests',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify(body)});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));
+    msg.className='msg ok';
+    msg.textContent='Request sent. The hub owner will approve it.';
+    $('packages').value='';$('note').value='';
+  }catch(e){msg.className='msg err';msg.textContent=e.message}
+});
+load().catch(e=>{$('msg').className='msg err';$('msg').textContent=e.message});
+</script>
+</body>
+</html>
