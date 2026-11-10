@@ -28,8 +28,8 @@ const requiredRouteEntries=[
   {id:100140,date:'2026-09-17',driver:'Me',packages:37,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'}
 ];
 const DEFAULT_DRIVERS=['Me','Valerie','Suzanne','Brianna','Ronna'];
-const HUB_LIST=[{id:'rotrepair',name:'Right On Time Repair'},{id:'smg',name:'SMG Logistics'}];
-const DEFAULT_HUB='Right On Time Repair';
+const HUB_LIST=[{id:'rotrepair',name:'S.M.G LLC',aliases:['Right On Time Repair','ROTR','SMG LLC']},{id:'smg',name:'SMG Logistics'}];
+const DEFAULT_HUB='S.M.G LLC';
 const WEEKDAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const ROSTER_STATUSES=['active','occasional','onboarding','inactive'];
 const HIRING_NOTE='Hiring: 1 consistent 5-day driver';
@@ -50,7 +50,7 @@ function normDrivers(list){
 function canonicalHub(value){
   const s=String(value||'').trim();
   if(!s)return '';
-  const hit=HUB_LIST.find(h=>h.name.toLowerCase()===s.toLowerCase()||h.id.toLowerCase()===s.toLowerCase());
+  const hit=HUB_LIST.find(h=>h.name.toLowerCase()===s.toLowerCase()||h.id.toLowerCase()===s.toLowerCase()||(h.aliases||[]).some(a=>a.toLowerCase()===s.toLowerCase()));
   return hit?hit.name:'';
 }
 function entryHubName(e){return canonicalHub(e?.hub)||DEFAULT_HUB}

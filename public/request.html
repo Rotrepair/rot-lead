@@ -51,7 +51,7 @@ async function load(){
   if(!r.ok)throw new Error(data.error||'Could not load the roster');
   drivers=Array.isArray(data.drivers)?data.drivers:[];
   $('name').innerHTML=drivers.map(d=>`<option value="${esc(d.name)}">${esc(label(d))}</option>`).join('')||'<option value="">No drivers yet</option>';
-  const hubs=Array.isArray(data.hubs)&&data.hubs.length?data.hubs:['Right On Time Repair','SMG Logistics'];
+  const hubs=Array.isArray(data.hubs)&&data.hubs.length?data.hubs:['S.M.G LLC','SMG Logistics'];
   $('hub').innerHTML=hubs.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('');
   $('date').value=localDate();
   const hiring=$('hiring');
