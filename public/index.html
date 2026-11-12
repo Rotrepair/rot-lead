@@ -16,7 +16,7 @@
 </style>
 </head>
 <body><div class="wrap">
-<div class="top"><div class="title"><h1>Amazon Hub Tracker</h1><p>Packages • Revenue • Hours • Mileage • Driver ETA • History</p></div><div class="pill">Amazon $2.50/pkg | Mom $1.10/pkg | Goal 350/wk</div></div>
+<div class="top"><div class="title"><h1>Amazon Hub Tracker</h1><p>Packages • Revenue • Hours • Mileage • Driver ETA • History</p></div><div class="pill">Amazon $2.50/pkg | Mom $1.10/pkg | Goal 420/wk</div></div>
 
 <div class="section eta"><div class="top"><h2>Live Driver ETA</h2><span class="status" id="etaStatus">Waiting for update</span></div><div class="grid"><div class="card"><small>Driver</small><div class="big" id="etaDriver">—</div></div><div class="card"><small>Packages</small><div class="big" id="etaPackages">—</div></div><div class="card"><small>Drop ETA</small><div class="big gold" id="etaTime">—</div></div><div class="card"><small>Last SMS</small><div class="big" id="etaReceived">—</div></div></div><div class="note" id="etaMessage">Waiting for driver update.</div></div>
 
@@ -36,7 +36,7 @@
 <div class="modalbg" id="rosterModal"><div class="modal"><div class="top"><h2 style="margin:0" id="rTitle">Driver</h2><span class="note" id="rSavedAs"></span></div><div class="form" style="margin-top:12px"><div><label>Display name</label><input id="rDisplay" maxlength="40"></div><div><label>Phone</label><input id="rPhone" maxlength="40" inputmode="tel" placeholder="Optional"></div><div><label>Email</label><input id="rEmail" maxlength="80" inputmode="email" placeholder="Optional"></div><div><label>Role</label><input id="rRole" maxlength="40"></div><div><label>Status</label><select id="rStatus"><option value="active">Active</option><option value="occasional">Occasional</option><option value="onboarding">Onboarding</option><option value="inactive">Inactive</option></select></div><div><label>Note</label><input id="rNote" maxlength="200"></div></div><div class="note">Usual days</div><div class="checkrow" id="rDays"></div><div class="note">Maybe</div><div class="checkrow" id="rMaybe"></div><div class="note">Hubs</div><div class="checkrow" id="rHubs"></div><div class="actions"><button class="primary" id="rSave" type="button">Save Roster</button><button class="secondary" id="rCancel" type="button">Cancel</button></div></div></div>
 <script src="/history-data.js"></script>
 <script>
-const AMAZON_RATE=2.5,DRIVER_RATE=1.1,WEEKLY_GOAL=350,$=id=>document.getElementById(id),imported=Array.isArray(window.AMAZON_HUB_HISTORY)?window.AMAZON_HUB_HISTORY:[];
+const AMAZON_RATE=2.5,DRIVER_RATE=1.1,WEEKLY_GOAL=420,$=id=>document.getElementById(id),imported=Array.isArray(window.AMAZON_HUB_HISTORY)?window.AMAZON_HUB_HISTORY:[];
 const ENTRY_KEY='amazonHubEntries',DRAFT_KEY='amazonHubDraft',DAILY_DRAFT_PREFIX='amazonHubDailyDraft:';
 let entries=[],view='daily',formDirty=false,activeFormDate='',activeFormDriver='',runningDate='';
 function localDate(){const d=new Date(),off=d.getTimezoneOffset()*60000;return new Date(d-off).toISOString().slice(0,10)}
