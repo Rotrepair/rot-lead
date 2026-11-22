@@ -1,6 +1,11 @@
 const http=require('http');
 const fs=require('fs');
 const path=require('path');
+const companyProfile=require('./lib/company-profile');
+const sync=require('./lib/sync');
+const connecteam=require('./lib/connecteam');
+const uiAuth=require('./lib/ui-auth');
+const crossover=require('./lib/crossover');
 const port=process.env.PORT||3000;
 const publicDir=path.join(__dirname,'public');
 const dataDir=process.env.HUB_DATA_DIR||'/data';
@@ -27,7 +32,7 @@ const requiredRouteEntries=[
   {id:100139,date:'2026-09-16',driver:'Me',packages:48,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'},
   {id:100140,date:'2026-09-17',driver:'Me',packages:37,hours:0,miles:0,expense:0,source:'Imported Sep 2026 operations'}
 ];
-const DEFAULT_DRIVERS=['Me','Valerie','Suzanne','Brianna','Ronna'];
+const DEFAULT_DRIVERS=['Me','Valerie','Annette','Suzanne','Brianna'];
 const HUB_LIST=[{id:'rotrepair',name:'S.M.G LLC',aliases:['Right On Time Repair','ROTR','SMG LLC']},{id:'smg',name:'SMG Logistics'}];
 const DEFAULT_HUB='S.M.G LLC';
 const WEEKDAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -37,7 +42,8 @@ const ROSTER_SEED=[
   {name:'Me',displayName:'Eric',phone:'',email:'',role:'Owner',availability:WEEKDAYS.slice(),maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:'Main hub owner. Past routes stay saved as Me.'},
   {name:'Valerie',displayName:'Val',phone:'',email:'',role:'Point of contact',availability:[],maybeDays:[],status:'onboarding',hubs:['SMG Logistics'],note:'Rarely drives. Point of contact for SMG Logistics.'},
   {name:'Suzanne',displayName:'Suzanne',phone:'',email:'',role:'Driver',availability:['Mon','Wed','Thu'],maybeDays:['Thu'],status:'active',hubs:[DEFAULT_HUB],note:'Thursday is maybe.'},
-  {name:'Brianna',displayName:'Brianna',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''},
+  {name:'Brianna',displayName:'Brianna',phone:'',email:'',role:'Driver',availability:['Mon','Tue','Wed','Thu','Fri'],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:'Does not drive weekends.'},
+  {name:'Annette',displayName:'Annette',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:'Newest active driver.'},
   {name:'Ronna',displayName:'Ronna',phone:'',email:'',role:'Driver',availability:[],maybeDays:[],status:'active',hubs:[DEFAULT_HUB],note:''}
 ];
 function normDeleted(list){return Array.isArray(list)?list.filter(d=>d&&d.id!=null).map(d=>({...d,id:String(d.id)})):[]}
@@ -166,7 +172,8 @@ function ensureRequiredEntries(state){
   return out;
 }
 function readHubState(){try{return ensureRequiredEntries(JSON.parse(fs.readFileSync(hubStateFile,'utf8')))}catch{return ensureRequiredEntries({entries:[],stops:[],updatedAt:null,revision:0})}}
-function writeHubState(data){try{fs.writeFileSync(hubStateFile,JSON.stringify(data,null,2));return true}catch(e){console.error('Hub state save error',e.message);return false}}
+function atomicWriteJson(file,data){const tmp=file+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2));fs.renameSync(tmp,file)}
+function writeHubState(data){try{atomicWriteJson(hubStateFile,data);return true}catch(e){console.error('Hub state save error',e.message);return false}}
 const packageCorrections={'2026-09-19':44,'2026-09-29':40,'2026-10-05':37};
 const clearedStopDates=new Set(['2026-10-05']);
 function hasValue(v){return v!==null&&v!==undefined&&v!==''}
@@ -257,12 +264,124 @@ async function cacheMedia(item,idx,accountSid){
     return {...item,cachedFile:file,type,authMode,cacheError:null};
   }catch(e){console.error('Media cache error',e.message);return {...item,cacheError:e.message}}
 }
-function collect(req){return new Promise((resolve,reject)=>{let b='';req.on('data',d=>{b+=d;if(b.length>2e6)req.destroy()});req.on('end',()=>resolve(b));req.on('error',reject)})}
+function collectRaw(req){return new Promise((resolve,reject)=>{const chunks=[];let n=0;req.on('data',d=>{n+=d.length;if(n>2e6)req.destroy();chunks.push(d)});req.on('end',()=>resolve(Buffer.concat(chunks)));req.on('error',reject)})}
+function collect(req){return collectRaw(req).then(b=>b.toString('utf8'))}
 function json(res,obj,status=200){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(obj))}
 function sameLocalDay(a,b){return a&&b&&String(a).slice(0,10)===String(b).slice(0,10)}
 
 const server=http.createServer(async(req,res)=>{
-  const reqPath=req.url.split('?')[0];
+  const reqUrl=new URL(req.url,'http://localhost');
+  const reqPath=reqUrl.pathname;
+  if(await uiAuth.handle(req,res,reqPath,collect))return;
+
+  if(reqPath==='/api/company-profile'&&req.method==='GET'){
+    return json(res,{ok:true,hub:'S.M.G LLC',...companyProfile.COMPANY_PROFILE,rosterDefaults:companyProfile.ACTIVE_ROSTER_DEFAULTS});
+  }
+
+  function syncAuth(){
+    const a=sync.requireSyncAuth(req);
+    if(a.ok)return a;
+    // Also accept a Scanner crossover/API token so the two apps can share one secret set.
+    const alt=String(process.env.ROT_CROSSOVER_TOKEN||process.env.ROT_API_TOKEN||'').trim();
+    if(!alt)return a;
+    const offered=String((req.headers.authorization||'').replace(/^Bearer\s+/i,'')||req.headers['x-api-token']||req.headers['x-hub-sync-token']||'').trim();
+    if(offered&&crossover.safeEqual(offered,alt))return {ok:true};
+    return a;
+  }
+
+  if(reqPath==='/api/v1/crossover/webhook'&&req.method==='POST'){
+    try{
+      const raw=await collectRaw(req);
+      const secret=crossover.hmacSecret();
+      if(!secret&&!sync.syncToken()&&!String(process.env.ROT_CROSSOVER_TOKEN||process.env.ROT_API_TOKEN||'').trim()){
+        return json(res,{ok:false,error:'ROT_HMAC_SECRET or a sync token must be configured'},503);
+      }
+      if(!crossover.signatureIsValid(raw,crossover.presentedSignature(req))){
+        return json(res,{ok:false,error:'invalid signature'},401);
+      }
+      const body=JSON.parse(raw.length?raw.toString('utf8'):'{}');
+      const result=crossover.applyInboundEvent(dataDir,body);
+      return json(res,result,result.ok===false?200:200);
+    }catch(e){return json(res,{ok:false,error:e.message},400)}
+  }
+
+  if(reqPath==='/api/v1/crossover'&&req.method==='GET'){
+    const auth=syncAuth();
+    if(!auth.ok)return json(res,{ok:false,error:auth.error},auth.status);
+    return json(res,crossover.exportCrossover(dataDir,reqUrl.searchParams.get('since')));
+  }
+
+  if(reqPath==='/api/v1/crossover/import'&&req.method==='POST'){
+    try{
+      const raw=await collectRaw(req);
+      const auth=syncAuth();
+      const secret=crossover.hmacSecret();
+      if(secret){
+        if(!crossover.signatureIsValid(raw,crossover.presentedSignature(req)))return json(res,{ok:false,error:'invalid signature'},401);
+      }else if(!auth.ok){
+        return json(res,{ok:false,error:auth.error},auth.status);
+      }
+      if(secret&&!auth.ok&&!crossover.signatureIsValid(raw,crossover.presentedSignature(req))){
+        return json(res,{ok:false,error:'unauthorized'},401);
+      }
+      const body=JSON.parse(raw.length?raw.toString('utf8'):'{}');
+      const result=crossover.importCrossover(dataDir,body,'hub');
+      if(result.ok)crossover.postToScanner(dataDir).catch(err=>console.error('Scanner crossover post failed',err&&err.message));
+      return json(res,result,result.ok?200:200);
+    }catch(e){return json(res,{ok:false,error:e.message},400)}
+  }
+
+  if(reqPath==='/api/sync/export'&&req.method==='GET'){
+    const auth=syncAuth();
+    if(!auth.ok)return json(res,{ok:false,error:auth.error},auth.status);
+    const since=reqUrl.searchParams.get('since');
+    const data=sync.buildExport(readHubState(),since);
+    if(String(reqUrl.searchParams.get('format')||'').toLowerCase()==='csv'){
+      const rows=data.entries||[];
+      const headers=['id','date','driver','hub','packages','hours','miles','expense','updated_at'];
+      const esc=v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`;
+      const csv=[headers.join(',')].concat(rows.map(e=>headers.map(h=>esc(e[h])).join(','))).join('\n');
+      res.writeHead(200,{'Content-Type':'text/csv','Cache-Control':'no-store'});
+      return res.end(csv);
+    }
+    return json(res,{ok:true,...data});
+  }
+
+  if(reqPath==='/api/sync/import'&&req.method==='POST'){
+    try{
+      const auth=syncAuth();
+      if(!auth.ok)return json(res,{ok:false,error:auth.error},auth.status);
+      const raw=await collectRaw(req);
+      const parsed=sync.interpretImport(raw,req.headers['content-type'],Object.fromEntries(reqUrl.searchParams));
+      if(parsed.kind==='connecteam'){
+        const result=connecteam.importShifts(dataDir,parsed.rows);
+        return json(res,{ok:true,kind:'connecteam',format:parsed.format,...result});
+      }
+      const current=readHubState();
+      const dead=new Set((current.deleted||[]).map(d=>String(d.id)));
+      const incoming=(parsed.entries||[]).filter(e=>e&&(e.id==null||!dead.has(String(e.id))));
+      const merged=sync.dedupeEntries(current.entries,incoming);
+      const next={...current,entries:merged.entries,updatedAt:new Date().toISOString(),revision:Number(current.revision||0)+1};
+      if(!writeHubState(ensureRequiredEntries(next)))return json(res,{ok:false,error:'save failed'},500);
+      return json(res,{ok:true,kind:'entries',format:parsed.format,upserts:merged.upserts,skipped:merged.skipped,total:merged.total,revision:next.revision,updated_at:next.updatedAt});
+    }catch(e){return json(res,{ok:false,error:e.message},400)}
+  }
+
+  if(reqPath==='/api/sync/connecteam/status'&&req.method==='GET'){
+    const auth=syncAuth();
+    if(!auth.ok)return json(res,{ok:false,error:auth.error},auth.status);
+    return json(res,{ok:true,...connecteam.status()});
+  }
+
+  if(reqPath==='/api/sync/connecteam/shifts'&&req.method==='GET'){
+    const auth=syncAuth();
+    if(!auth.ok)return json(res,{ok:false,error:auth.error},auth.status);
+    const data=connecteam.readShifts(dataDir);
+    const since=reqUrl.searchParams.get('since');
+    const shifts=sync.filterSince(data.shifts||[],since,data.updated_at);
+    return json(res,{ok:true,updated_at:data.updated_at,since:since||null,shifts});
+  }
+
   if(reqPath==='/api/hub-state'&&req.method==='GET')return json(res,readHubState());
   if(reqPath==='/api/hub-state'&&req.method==='POST'){
     try{
