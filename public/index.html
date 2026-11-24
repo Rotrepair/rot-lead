@@ -108,7 +108,7 @@ function renderDrivers(){
   const chips=$('driverChips');if(chips)chips.innerHTML=all.map(d=>`<span class="chip">${esc(driverLabel(d))}${d==='Me'?'':`<button type="button" title="Remove from list" data-remove-driver="${esc(d)}">✕</button>`}</span>`).join('');
 }
 async function saveDrivers(list){
-  try{const r=await fetch('/api/hub-drivers',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify({drivers:list})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));applyHubMeta(data)}
+  try{const r=await fetch('/api/hub-drivers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({drivers:list})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));applyHubMeta(data)}
   catch(e){alert('Could not save the driver list: '+e.message)}
 }
 function listedDrivers(){const names=[];const push=n=>{if(n&&!removedDriver(n)&&!names.some(x=>x.toLowerCase()===String(n).toLowerCase()))names.push(n)};hubDrivers.forEach(push);roster.forEach(r=>{if(r.status!=='inactive')push(r.name)});if(!names.some(n=>n.toLowerCase()==='me'))names.unshift('Me');return names}
@@ -116,7 +116,7 @@ function addDriver(){const n=$('newDriver').value.trim();if(!n)return;if(removed
 function removeDriver(n){if(n==='Me')return;if(!confirm(`Remove ${driverLabel(n)} from the driver list? Their past entries stay in history.`))return;saveDrivers(listedDrivers().filter(d=>d!==n))}
 function applyServerEntries(data){applyHubMeta(data);if(Array.isArray(data.entries)){entries=data.entries.map(e=>({...e}));localStorage.setItem(ENTRY_KEY,JSON.stringify(entries))}renderDrivers();render();if(!formDirty&&!loadSavedRoute($('date').value,$('driver').value))clearDailyFields()}
 async function entryRequest(method,id,body){
-  const r=await fetch('/api/hub-state/entries/'+encodeURIComponent(id),{method,headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:body?JSON.stringify(body):undefined});
+  const r=await fetch('/api/hub-state/entries/'+encodeURIComponent(id),{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
   const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));return data;
 }
 let editingId=null;
@@ -144,6 +144,7 @@ async function syncHubState(){
   if(hubSyncBusy)return;hubSyncBusy=true;
   try{
     const r=await fetch('/api/hub-state?ts='+Date.now(),{cache:'no-store'});
+    if(r.status===401){location.replace('/login');return}
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
     applyHubMeta(data);
@@ -166,7 +167,7 @@ async function pushHubState(){
   try{
     const stops=safeParse(localStorage.getItem('amazonHubStops'),[]);
     const dead=deletedIdSet();
-    const r=await fetch('/api/hub-state',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify({entries:entries.filter(e=>!dead.has(String(e.id))),stops})});
+    const r=await fetch('/api/hub-state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries:entries.filter(e=>!dead.has(String(e.id))),stops})});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
     applyHubMeta(data);
@@ -396,7 +397,7 @@ function fillIntakeInput(){
   renderIntake();
 }
 async function postJSON(url,body){
-  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify(body)});
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await r.json().catch(()=>({}));
   if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));
   return data;

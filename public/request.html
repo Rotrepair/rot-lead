@@ -47,6 +47,7 @@ function fillHubs(person){
 }
 async function load(){
   const r=await fetch('/api/hub-request-form',{cache:'no-store'});
+  if(r.status===401){location.replace('/login');return}
   const data=await r.json();
   if(!r.ok)throw new Error(data.error||'Could not load the roster');
   drivers=Array.isArray(data.drivers)?data.drivers:[];
@@ -64,7 +65,7 @@ $('form').addEventListener('submit',async ev=>{
   const msg=$('msg');msg.className='msg';msg.textContent='Sending…';
   const body={driver:$('name').value,hub:$('hub').value,date:$('date').value,packages:Number($('packages').value),note:$('note').value.trim()};
   try{
-    const r=await fetch('/api/hub-requests',{method:'POST',headers:{'Content-Type':'application/json','X-Hub-Write':'explicit-v2'},body:JSON.stringify(body)});
+    const r=await fetch('/api/hub-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await r.json().catch(()=>({}));
     if(!r.ok||!data.ok)throw new Error(data.error||('HTTP '+r.status));
     msg.className='msg ok';
