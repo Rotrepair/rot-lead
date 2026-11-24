@@ -5,6 +5,7 @@ const companyProfile=require('./lib/company-profile');
 const sync=require('./lib/sync');
 const connecteam=require('./lib/connecteam');
 const uiAuth=require('./lib/ui-auth');
+const twilioSign=require('./lib/twilio-sign');
 const crossover=require('./lib/crossover');
 const port=process.env.PORT||3000;
 const publicDir=path.join(__dirname,'public');
@@ -269,10 +270,14 @@ function collect(req){return collectRaw(req).then(b=>b.toString('utf8'))}
 function json(res,obj,status=200){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(obj))}
 function sameLocalDay(a,b){return a&&b&&String(a).slice(0,10)===String(b).slice(0,10)}
 
+function hasOwnMachineAuth(reqPath){
+  // Sync and crossover already fail closed on their own token or HMAC.
+  return reqPath.startsWith('/api/sync/')||reqPath.startsWith('/api/v1/crossover');
+}
 const server=http.createServer(async(req,res)=>{
   const reqUrl=new URL(req.url,'http://localhost');
   const reqPath=reqUrl.pathname;
-  if(await uiAuth.handle(req,res,reqPath,collect))return;
+  if(!hasOwnMachineAuth(reqPath)&&await uiAuth.handle(req,res,reqPath,collect))return;
 
   if(reqPath==='/api/company-profile'&&req.method==='GET'){
     return json(res,{ok:true,hub:'S.M.G LLC',...companyProfile.COMPANY_PROFILE,rosterDefaults:companyProfile.ACTIVE_ROSTER_DEFAULTS});
@@ -386,9 +391,6 @@ const server=http.createServer(async(req,res)=>{
   if(reqPath==='/api/hub-state'&&req.method==='POST'){
     try{
       const current=readHubState();
-      // Only the current client may write shared state. Older open tabs used to POST
-      // their whole localStorage every 20 seconds and could overwrite newer data.
-      if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:true,ignoredStaleClient:true,...current});
       const raw=await collect(req),incoming=JSON.parse(raw||'{}'),merged=mergeHubState(current,incoming||{});
       if(!writeHubState(merged))return json(res,{ok:false,error:'save failed'},500);
       return json(res,{ok:true,...merged});
@@ -396,7 +398,6 @@ const server=http.createServer(async(req,res)=>{
   }
   const entryMatch=reqPath.match(/^\/api\/hub-state\/entries\/([^/]+)$/);
   if(entryMatch&&(req.method==='DELETE'||req.method==='PUT')){
-    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
     try{
       const id=decodeURIComponent(entryMatch[1]),current=readHubState(),idx=current.entries.findIndex(e=>String(e.id)===id);
       if(idx<0)return json(res,{ok:false,error:'entry not found'},404);
@@ -432,7 +433,6 @@ const server=http.createServer(async(req,res)=>{
     }catch(e){console.error('Hub entry error',e.message);return json(res,{ok:false,error:e.message},400)}
   }
   if(reqPath==='/api/hub-drivers'&&req.method==='POST'){
-    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
     try{
       const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
       if(!Array.isArray(body.drivers))return json(res,{ok:false,error:'drivers list required'},400);
@@ -458,7 +458,6 @@ const server=http.createServer(async(req,res)=>{
     }catch(e){return json(res,{ok:false,error:e.message},400)}
   }
   if(reqPath==='/api/hub-roster'&&req.method==='POST'){
-    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
     try{
       const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
       if(!Array.isArray(body.roster))return json(res,{ok:false,error:'roster required'},400);
@@ -477,7 +476,6 @@ const server=http.createServer(async(req,res)=>{
     }catch(e){return json(res,{ok:false,error:e.message},400)}
   }
   if(reqPath==='/api/hub-intake'&&req.method==='POST'){
-    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
     try{
       const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
       if(!/^\d{4}-\d{2}-\d{2}$/.test(String(body.date||'')))return json(res,{ok:false,error:'invalid date'},400);
@@ -496,7 +494,6 @@ const server=http.createServer(async(req,res)=>{
     return json(res,{ok:true,hubs:current.hubs,hiring:current.hiring,drivers:rosterPublic(current.roster)});
   }
   if(reqPath==='/api/hub-requests'&&req.method==='POST'){
-    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
     try{
       const body=JSON.parse(await collect(req)||'{}'),current=readHubState();
       const person=current.roster.find(r=>r.name.toLowerCase()===String(body.driver||'').trim().toLowerCase()&&r.status!=='inactive');
@@ -515,7 +512,6 @@ const server=http.createServer(async(req,res)=>{
   }
   const requestMatch=reqPath.match(/^\/api\/hub-requests\/([^/]+)$/);
   if(requestMatch&&req.method==='POST'){
-    if(req.headers['x-hub-write']!=='explicit-v2')return json(res,{ok:false,error:'missing write header'},403);
     try{
       const id=decodeURIComponent(requestMatch[1]),body=JSON.parse(await collect(req)||'{}'),current=readHubState();
       const idx=current.requests.findIndex(r=>String(r.id)===id);
@@ -557,7 +553,14 @@ const server=http.createServer(async(req,res)=>{
   }
   if(reqPath==='/sms'&&req.method==='POST'){
     try{
-      const raw=await collect(req),form=new URLSearchParams(raw),from=form.get('From')||'',body=form.get('Body')||'',parsed=parseMessage(body),name=driverName(from,parsed.driverFromBody),now=new Date().toISOString(),numMedia=Number(form.get('NumMedia')||0),accountSid=form.get('AccountSid')||process.env.TWILIO_ACCOUNT_SID||'',media=[];
+      const raw=await collect(req);
+      const verdict=twilioSign.verify(req,raw);
+      if(!verdict.ok){
+        console.error('SMS rejected',verdict.reason);
+        res.writeHead(403,{'Content-Type':'text/plain','Cache-Control':'no-store'});
+        return res.end('Forbidden');
+      }
+      const form=new URLSearchParams(raw),from=form.get('From')||'',body=form.get('Body')||'',parsed=parseMessage(body),name=driverName(from,parsed.driverFromBody),now=new Date().toISOString(),numMedia=Number(form.get('NumMedia')||0),accountSid=form.get('AccountSid')||process.env.TWILIO_ACCOUNT_SID||'',media=[];
       for(let i=0;i<numMedia;i++){
         const url=form.get(`MediaUrl${i}`),type=form.get(`MediaContentType${i}`);
         if(url)media.push({url,type:type||''});

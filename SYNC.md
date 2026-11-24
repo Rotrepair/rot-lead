@@ -65,9 +65,9 @@ Stay on the free plan. The feed is an import of the Connecteam **Shift Report** 
 
 `lib/connecteam.js` still has a disabled API stub. Do not sign up or request API access. Revisit a paid API only if we go over 10 users, the 2nd hub goes live, or after January 12, 2027.
 
-## UI login gate
+## UI and API access
 
-If `HUB_UI_PASSWORD` is set, HTML pages require a login cookie. APIs and `/sms` stay on their existing auth. Optional `HUB_UI_SESSION_SECRET`. If the password is unset, the gate stays off so production is not locked out on a future deploy.
+The hub UI and hub `/api/*` routes require an owner session (`HUB_UI_PASSWORD` plus `SESSION_SECRET`) or `Authorization: Bearer $HUB_API_TOKEN`. If either owner secret is unset, those routes stay closed. `/sms` stays open and checks `X-Twilio-Signature` with `TWILIO_AUTH_TOKEN`. `/api/sync/*` and `/api/v1/crossover/*` keep their existing token and HMAC checks. See `README.md`. The `X-Hub-Write` header is not used.
 
 ## Amazon Hub portal
 
